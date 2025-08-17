@@ -1,0 +1,6 @@
+FROM wordpress:latest
+
+# Install required dependencies
+RUN apt update && apt install -y libxml2-dev \
+	&& docker-php-ext-install soap \
+	&& docker-php-ext-enable soap

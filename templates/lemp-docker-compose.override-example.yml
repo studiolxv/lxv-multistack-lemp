@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  nginx:
+    # Example: Map a local directory for quick custom config testing
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/html:/usr/share/nginx/html:ro
+
+  db:
+    # Example: Override DB root password (for local dev only!)
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3307:3306" # Map DB to local port 3307 to avoid conflicts
+
+  phpmyadmin:
+    # Example: Make phpMyAdmin accessible on a different local port
+    ports:
+      - "8081:80"
+
+networks:
+  default:
+    name: dev_network_override

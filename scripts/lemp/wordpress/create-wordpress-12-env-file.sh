@@ -1,0 +1,88 @@
+#!/bin/sh
+. "$PROJECT_PATH/_environment.sh"
+file_msg "$(basename "$0")"
+
+#
+# SOURCE LEMP STACK .ENV
+if [[ -z "${STACK_NAME}" ]]; then
+	status_msg "${C_Yellow}\$STACK_NAME${C_Reset} is not defined, please select a LEMP stack."
+	# Select a LEMP stack using the new function, defines ${STACK_NAME}
+	select_lemp_stack
+else
+	success_msg "${C_Yellow}\$STACK_NAME${C_Reset} is defined as '${C_Yellow}${STACK_NAME}${C_Reset}'. Proceeding..."
+fi
+
+source_lemp_stack_env ${STACK_NAME}
+
+#
+# WORDPRESS: ENV FILE
+# Check if the .env file already exists
+if [ -f "$WORDPRESS_ENV_FILE" ]; then
+	success_msg "$WORDPRESS_PATH/.env file already exists."
+else
+	status_msg "🔍 ${C_Reset}$WORDPRESS_PATH/.env file ${C_Red}not found."
+	line_break
+	status_msg "   ${C_Yellow}Generating with dynamic variables..."
+
+	cat <<EOL >"$WORDPRESS_ENV_FILE"
+# LEMP
+DB_HOST_NAME="${DB_HOST_NAME}"
+LEMP_NETWORK_NAME="${LEMP_NETWORK_NAME}"
+#
+# WORDPRESS CONTAINER:
+WORDPRESS_IMAGE="${WORDPRESS_IMAGE}"
+WORDPRESS_CONTAINER_NAME="${WORDPRESS_CONTAINER_NAME}"
+WORDPRESS_SERVICE_CONTAINER_NAME="${WORDPRESS_SERVICE_CONTAINER_NAME}"
+WORDPRESS_DIR="${WORDPRESS_DIR}"
+WORDPRESS_PATH="${WORDPRESS_PATH}"
+WORDPRESS_CONTAINER_PATH="${WORDPRESS_PATH}"
+WORDPRESS_PUBLIC_DIR="${WORDPRESS_PUBLIC_DIR}"
+WORDPRESS_PUBLIC_PATH="${WORDPRESS_PUBLIC_PATH}"
+#
+# WORDPRESS DOMAIN
+WORDPRESS_SUBDOMAIN_NAME="${WORDPRESS_SUBDOMAIN_NAME}"
+WORDPRESS_SUBDOMAIN="${WORDPRESS_SUBDOMAIN}"
+#
+# WORDPRESS DATABASE
+WORDPRESS_DB_NAME="${WORDPRESS_DB_NAME}"
+WORDPRESS_DB_USER="${WORDPRESS_DB_USER}"
+WORDPRESS_DB_USER_PASSWORD="${WORDPRESS_DB_USER_PASSWORD}"
+WORDPRESS_TABLE_PREFIX="wp_"
+WORDPRESS_ADMIN_USER_EMAIL="${WORDPRESS_ADMIN_USER_EMAIL}"
+WORDPRESS_ADMIN_USER="${WORDPRESS_ADMIN_USER}"
+WORDPRESS_ADMIN_USER_PASSWORD="${WORDPRESS_ADMIN_USER_PASSWORD}"
+#
+# ENV FILE
+WORDPRESS_NGINX_SERVICE_CONTAINER_NAME="${WORDPRESS_NGINX_SERVICE_CONTAINER_NAME}"
+WORDPRESS_NGINX_PATH="${WORDPRESS_NGINX_PATH}"
+WORDPRESS_NGINX_CONF_PATH="${WORDPWORDPRESS_NGINX_CONF_PATHRESS_NGINX_PATH}"
+WORDPRESS_NGINX_CONF_FILE="${WORDPRESS_NGINX_CONF_FILE}"
+#
+# ENV FILE
+WORDPRESS_ENV_FILE="${WORDPRESS_ENV_FILE}"
+#
+# DOCKER COMPOSE FILE
+WORDPRESS_DOCKER_COMPOSE_YML="${WORDPRESS_DOCKER_COMPOSE_YML}"
+EOL
+
+	cat_msg "$WORDPRESS_ENV_FILE" # Display the .env file content
+	line_break
+
+	# Debugging pwd
+	# echo "$WORDPRESS_PATH"
+
+	if [ -f "$WORDPRESS_ENV_FILE" ]; then
+		success_msg "${WORDPRESS_PATH}/.env file created successfully"
+	else
+		error_msg "creating ${WORDPRESS_PATH}/.env file created, create manually or try again"
+	fi
+fi
+
+###############
+
+# Verify .env variables before starting the container
+. "$WORDPRESS_PATH/.env"
+
+#
+# CREATE LEMP STACK - WORDPRESS CONTAINER
+sh "${SCRIPTS_PATH}/lemp/wordpress/create-wordpress-13-traefik-config.sh"

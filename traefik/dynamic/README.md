@@ -1,0 +1,1 @@
+Each LEMP stack domain will have its own config file inside dynamic

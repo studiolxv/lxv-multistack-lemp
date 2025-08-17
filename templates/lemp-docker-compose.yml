@@ -1,0 +1,143 @@
+name: ${LEMP_CONTAINER_NAME}
+services:
+  db:
+    container_name: ${DB_HOST_NAME}
+    env_file:
+      - .env
+    image: ${DB_IMAGE}
+    platform: ${OS_DOCKER_IMAGE_PLATFORM:-linux/amd64}
+    restart: always
+    environment:
+      TZ: ${OS_TZ}
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_user_password
+      MYSQL_ROOT_HOST: "%"
+    secrets:
+      - db_root_user
+      - db_root_user_password
+    volumes:
+      - "./.env:/etc/environment:ro"
+      - "./${DB_DIR}/data:/${DB_CONTAINER_DATA_PATH}"
+      - "./${DB_DIR}/${DB_CONF_FILE}:/${DB_CONTAINER_CONF_PATH}"
+      - "./${DB_DIR}/backups:/${BACKUPS_CONTAINER_NAME}/backups"
+      - "./${LOG_DIR}:${LOG_CONTAINER_PATH}"
+      - "./${BACKUPS_SCRIPTS_DIR}/mysql-healthcheck.sh:/${BACKUPS_CONTAINER_NAME}/scripts/mysql-healthcheck.sh"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "/${BACKUPS_CONTAINER_NAME}/scripts/mysql-healthcheck.sh"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+    networks:
+      - ${LEMP_NETWORK_NAME}
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    platform: ${OS_DOCKER_IMAGE_PLATFORM:-linux/amd64}
+    container_name: ${LEMP_SERVER_DOMAIN_NAME}-phpmyadmin
+    hostname: phpmyadmin.${LEMP_SERVER_DOMAIN}
+    restart: always
+    env_file:
+      - .env
+    environment:
+      TZ: ${OS_TZ}
+      PMA_HOST: ${DB_HOST_NAME}
+      PMA_PORT: 3306
+      SERVER_NAME: phpmyadmin.${LEMP_SERVER_DOMAIN}
+    volumes:
+      - ./.env:/etc/environment:ro
+      # - ./${PHPMYADMIN_DIR}/phpmyadmin.conf:/etc/apache2/conf-available/phpmyadmin.conf
+      - "./${LOG_DIR}:${LOG_CONTAINER_PATH}"
+    networks:
+      - ${LEMP_NETWORK_NAME}
+      - traefik_network
+    depends_on:
+      - db
+
+  php-fpm:
+    container_name: ${LEMP_SERVER_DOMAIN_NAME}-php-fpm # (Matches the nginx conf.d location)
+    image: ${PHP_IMAGE} # php:8.0-fpm
+    platform: ${OS_DOCKER_IMAGE_PLATFORM:-linux/amd64}
+    env_file:
+      - .env
+    restart: always
+    volumes:
+      - ./.env:/etc/environment:ro
+      - ./${PHP_PUBLIC_DIR}:/usr/share/nginx/html # Ensure PHP files in lemp/html are processed by php
+      - ./php/php.ini:/usr/local/etc/php/php.ini # Mount the custom php.ini
+      - ${DB_PATH}/php-sessions:/sessions
+      - /usr/share/zoneinfo/America/Phoenix:/etc/localtime:ro
+    networks:
+      - ${LEMP_NETWORK_NAME}
+    depends_on:
+      - db
+
+  nginx:
+    container_name: ${LEMP_SERVER_DOMAIN_NAME}-nginx
+    image: nginx:latest
+    restart: always
+    env_file:
+      - .env
+    environment:
+      TZ: ${OS_TZ}
+    # extra_hosts:
+    #   - "${LEMP_SERVER_DOMAIN}:127.0.0.1"
+    #   - "phpmyadmin.${LEMP_SERVER_DOMAIN}:127.0.0.1"
+    volumes:
+      - ./.env:/etc/environment:ro
+      - "./nginx/conf.d:/etc/nginx/conf.d" # Loads all .conf files in this dir automatically
+      - "./${PHP_PUBLIC_DIR}:/usr/share/nginx/html"
+      - "${PROJECT_PATH}/traefik/certs:/etc/nginx/certs"
+    networks:
+      - traefik_network
+      - ${LEMP_NETWORK_NAME}
+    depends_on:
+      - php-fpm
+
+  backups:
+    image: debian:bookworm-slim
+    container_name: ${BACKUPS_CONTAINER_NAME}
+    tty: true  # Enables color output in logs
+    env_file:
+      - ./.env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+    volumes:
+      - "./crontabs/root:/var/spool/cron/crontabs/root"
+      - "./.env:/${BACKUPS_CONTAINER_NAME}/.env:ro"
+      - "./${BACKUPS_SCRIPTS_DIR}:/${BACKUPS_CONTAINER_NAME}/scripts"
+      - "./${DB_DIR}/backups:/${BACKUPS_CONTAINER_NAME}/backups"
+      - "./${LOG_DIR}:${LOG_CONTAINER_PATH}"
+    environment:
+      TZ: ${OS_TZ}
+      TERM: xterm-256color
+      MYSQL_HOST: db # Use the service name as the hostname
+      MYSQL_USER: root
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_user_password
+    secrets:
+      - db_root_user
+      - db_root_user_password
+    command: ["/bin/sh", "-c", "apt-get update && apt-get install -y default-mysql-client bash cron && sleep 2 && exec /${BACKUPS_CONTAINER_NAME}/scripts/lemp-init.sh"]
+    networks:
+      - ${LEMP_NETWORK_NAME}
+
+networks:
+  <<LEMP_NETWORK_NAME>>: # shell script during lemp-create.sh will replace this
+    name: ${LEMP_NETWORK_NAME}
+    driver: bridge
+    external: false
+
+  traefik_network:
+    external: true
+
+volumes: # Named volume for database persistence
+  backups:
+    driver: local
+  data:
+    driver: local
+
+secrets:
+  db_root_user:
+    file: ./secrets/db_root_user.txt
+  db_root_user_password:
+    file: ./secrets/db_root_user_password.txt
