@@ -3,27 +3,56 @@
 file_msg "$(basename "$0")"
 
 #####################################################
+# INITIALIZE WORDPRESS DATABASE
+# Creates the WordPress database and user if they do not exist
+line_break
+heading "INITIALIZE WORDPRESS DATABASE"
+
+#####################################################
 # SOURCE LEMP STACK .ENV
-if [[ -z "${STACK_NAME}" ]]; then
-	status_msg "${C_Yellow}\$STACK_NAME${C_Reset} is not defined, please select a LEMP stack."
+if [ -z "${STACK_NAME}" ]; then
+	warning_msg "${C_Yellow}\$STACK_NAME${C_Reset} is not defined, please select a LEMP stack."
 	# Select a LEMP stack using the new function, defines ${STACK_NAME}
 	select_lemp_stack
 else
-	success_msg "${C_Yellow}\$STACK_NAME${C_Reset} is defined as '${C_Yellow}${STACK_NAME}${C_Reset}'. Proceeding..."
+	debug_success_msg "${C_Yellow}\$STACK_NAME${C_Reset} is defined as '${C_Yellow}${STACK_NAME}${C_Reset}'. Proceeding..."
 fi
 
 source_lemp_stack_env ${STACK_NAME}
-
-#####################################################
-# VERIFY WORDPRESS DATABASE
-# Verify if WordPress is able to connect to the database
-
-heading "VERIFY WORDPRESS DATABASE"
-status_msg "🔍 ${C_Reset}Checking connection to newly created WordPress database ${C_Yellow}'$WORDPRESS_DB_NAME'${C_Reset}..."
 line_break
 
-# Wait for services to initialize
-sleep 5
+# Required variables check
+if [ -z "$WORDPRESS_SUBDOMAIN" ]; then
+	error_msg "WORDPRESS_SUBDOMAIN is not set. Please set it in your environment."
+	exit 1
+fi
+
+if [ -z "$WORDPRESS_DB_NAME" ]; then
+	error_msg "WORDPRESS_DB_NAME is not set. Please set it in your environment."
+	exit 1
+fi
+
+if [ -z "$WORDPRESS_DB_USER" ]; then
+	error_msg "WORDPRESS_DB_USER is not set. Please set it in your environment."
+	exit 1
+fi
+
+if [ -z "$WORDPRESS_DB_USER_PASSWORD" ]; then
+	error_msg "WORDPRESS_DB_USER_PASSWORD is not set. Please set it in your environment."
+	exit 1
+fi
+
+if [ -z "$DB_ROOT_USER_PASSWORD_FILE" ]; then
+	error_msg "DB_ROOT_USER_PASSWORD_FILE is not set. Please set it in your environment."
+	exit 1
+fi
+
+export MYSQL_ROOT_PASSWORD=$(cat "$DB_ROOT_USER_PASSWORD_FILE")
+ROOT_PW="$MYSQL_ROOT_PASSWORD"
+
+status_msg "🔍 ${C_Reset}Checking WP DB PASSWORD for user '${WORDPRESS_DB_USER}'..."
+
+line_break
 
 # Back to LEMP Directory
 changed_to_dir_msg "${LEMP_DIR}"
@@ -34,10 +63,10 @@ cd "${LEMP_PATH}" || {
 }
 
 # Run a MySQL query inside the LEMP database container
-DB_EXISTS=$(docker exec -i "${DB_HOST_NAME}" mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "SHOW DATABASES LIKE '${WORDPRESS_DB_NAME}';" 2>/dev/null)
+DB_EXISTS=$(docker exec -i "${DB_HOST_NAME}" mysql -u root -p"${ROOT_PW}" -s -N -e "SHOW DATABASES LIKE '${WORDPRESS_DB_NAME}';" 2>/dev/null)
 
 # Check if the database exists
-if [[ "$DB_EXISTS" == *"${WORDPRESS_DB_NAME}"* ]]; then
+if [ -n "$DB_EXISTS" ]; then
 	success_msg "Database ${C_Yellow}'${WORDPRESS_DB_NAME}'${C_Reset} exists in the LEMP ${C_Yellow}'${DB_HOST_NAME}'${C_Reset} container."
 else
 	error_msg "Database '${WORDPRESS_DB_NAME}' not found in LEMP ${DB_HOST_NAME}. Exiting..."

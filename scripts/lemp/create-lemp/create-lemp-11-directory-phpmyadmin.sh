@@ -49,59 +49,68 @@ EOL
 	fi
 fi
 
-
-
-# Fetch phpMyAdmin versions using the same function
 line_break
+section_title "PHPMYADMIN IMAGE"
 
-body_msg "🔃   Fetching latest docker images of phpMyAdmin... be patient, this may take a few minutes."
+if [ -n "${DEFAULT_PMA_IMAGE:-}" ]; then
 
-PHPMYADMIN_VERSIONS=$(fetch_all_latest_minor_versions "phpmyadmin")
+    input_cursor "DEFAULT_PMA_IMAGE is defined: $DEFAULT_PMA_IMAGE"
+	PHPMYADMIN_IMAGE="$DEFAULT_PMA_IMAGE"
+else
+	# Fetch phpMyAdmin versions using the same function
+	body_msg "🔃   Fetching latest docker images of phpMyAdmin... be patient, this may take a few minutes."
 
-# Dynamically populate selection list
-INDEX=1
-AVAILABLE_IMAGES=""
+	PHPMYADMIN_VERSIONS=$(fetch_all_latest_minor_versions "phpmyadmin")
 
-line_break
-section_title "PHPMYADMIN IMAGE" ${C_Magenta}
+	# Dynamically populate selection list
+	INDEX=1
+	AVAILABLE_IMAGES=""
 
-# Add phpMyAdmin images to selection
-for VERSION in $PHPMYADMIN_VERSIONS; do
-	AVAILABLE_IMAGES="$AVAILABLE_IMAGES\n$INDEX phpmyadmin:$VERSION"
-	option_msg "$INDEX. phpmyadmin:$VERSION" ${C_Magenta}
-	INDEX=$((INDEX + 1))
-done
+	line_break
+	section_title "PHPMYADMIN IMAGE OPTIONS" ${C_Magenta}
 
-# Add custom option
-option_msg "$INDEX. Other: Enter your own" ${C_Magenta}
+	# Add phpMyAdmin images to selection
+	for VERSION in $PHPMYADMIN_VERSIONS; do
+		AVAILABLE_IMAGES="$AVAILABLE_IMAGES\n$INDEX phpmyadmin:$VERSION"
+		option_msg "$INDEX. phpmyadmin:$VERSION" ${C_Magenta}
+		INDEX=$((INDEX + 1))
+	done
 
-line_break
-option_question "Select your preferred phpMyAdmin Docker image:"
+	# Add custom option
+	option_msg "$INDEX. Other: Enter your own" ${C_Magenta}
 
-# Read user input dynamically
-while true; do
+	line_break
+	option_question "Select your preferred phpMyAdmin Docker image:"
 
-	printf "%s" "$(input_cursor)"
-	read CHOICE
+	# Read user input dynamically
+	while true; do
 
-	# Find the matching choice
-	CHOSEN_IMAGE=$(printf "%b" "$AVAILABLE_IMAGES" | awk -v choice="$CHOICE" '$1 == choice {print $2}')
-
-	if [ -n "$CHOSEN_IMAGE" ]; then
-		export PHPMYADMIN_IMAGE="$CHOSEN_IMAGE"
-		break
-	elif [ "$CHOICE" -eq "$INDEX" ]; then
-		status_msg "Other: Enter your preferred phpMyAdmin Docker image (e.g. phpmyadmin:5.2)"
 		printf "%s" "$(input_cursor)"
-		read PHPMYADMIN_IMAGE
-		export PHPMYADMIN_IMAGE="${PHPMYADMIN_IMAGE}"
-		break
-	else
-		error_msg "Invalid choice, please try again."
-	fi
-done
+		read CHOICE
 
-input_cursor "Selected phpMyAdmin image: ${C_Magenta}$PHPMYADMIN_IMAGE"
+		# Find the matching choice
+		CHOSEN_IMAGE=$(printf "%b" "$AVAILABLE_IMAGES" | awk -v choice="$CHOICE" '$1 == choice {print $2}')
+
+		if [ -n "$CHOSEN_IMAGE" ]; then
+			PHPMYADMIN_IMAGE="$CHOSEN_IMAGE"
+			break
+		elif [ "$CHOICE" -eq "$INDEX" ]; then
+			status_msg "Other: Enter your preferred phpMyAdmin Docker image (e.g. phpmyadmin:5.2)"
+			printf "%s" "$(input_cursor)"
+			read PHPMYADMIN_IMAGE
+			PHPMYADMIN_IMAGE="${PHPMYADMIN_IMAGE}"
+			break
+		else
+			error_msg "Invalid choice, please try again."
+		fi
+	done
+
+	input_cursor "Selected phpMyAdmin image: ${C_Magenta}$PHPMYADMIN_IMAGE"
+fi
+
+#####################################################
+# EXPORT
+export PHPMYADMIN_IMAGE="${PHPMYADMIN_IMAGE}"
 
 #####################################################
 # CREATE LEMP STACK

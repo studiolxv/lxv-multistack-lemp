@@ -4,17 +4,18 @@ file_msg "$(basename "$0")"
 
 #####################################################
 # TRAEFIK YML
-
-# Check if the traefik/traefik.yaml file already exists
+heading "TRAEFIK"
+section_title "TRAEFIK .YML CONFIG"
+# Check if the traefik/traefik.yml file already exists
 if [ -f "$LEMP_TRAEFIK_CONFIG_YML_FILE" ]; then
-	success_msg "'${TRAEFIK_DYNAMIC_PATH}/${LEMP_SERVER_DOMAIN}.yaml' file already exists:"
+	success_msg "'${TRAEFIK_DYNAMIC_PATH}/${LEMP_SERVER_DOMAIN}.yml' file already exists:"
 else
-	warning_msg "'${TRAEFIK_DYNAMIC_PATH}/${LEMP_SERVER_DOMAIN}.yaml' file not found"
-	line_break
-	generating_msg "Generating 'traefik.yaml' file..."
+	warning_msg "'${TRAEFIK_DYNAMIC_PATH}/${LEMP_SERVER_DOMAIN}.yml' file not found"
+
+	generating_msg "Generating 'traefik.yml' file..."
 	line_break
 	cat <<EOL >"$LEMP_TRAEFIK_CONFIG_YML_FILE"
-# traefik.yaml
+# traefik.yml
 global:
   checkNewVersion: false
   sendAnonymousUsage: false
@@ -100,9 +101,9 @@ EOL
 	line_break
 
 	if [ -f "$LEMP_TRAEFIK_CONFIG_YML_FILE" ]; then
-		success_msg "'${TRAEFIK_DYNAMIC_PATH}/${LEMP_SERVER_DOMAIN}.yaml' created successfully"
+		success_msg "'${TRAEFIK_DYNAMIC_PATH}/${LEMP_SERVER_DOMAIN}.yml' created successfully"
 	else
-		error_msg "Failed to create '${TRAEFIK_DYNAMIC_PATH}/${LEMP_SERVER_DOMAIN}.yaml', check permissions or create manually."
+		error_msg "Failed to create '${TRAEFIK_DYNAMIC_PATH}/${LEMP_SERVER_DOMAIN}.yml', check permissions or create manually."
 	fi
 fi
 

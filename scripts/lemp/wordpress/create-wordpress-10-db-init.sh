@@ -7,12 +7,12 @@ file_msg "$(basename "$0")"
 
 #####################################################
 # SOURCE LEMP STACK .ENV
-if [[ -z "${STACK_NAME}" ]]; then
-	status_msg "${C_Yellow}\$STACK_NAME${C_Reset} is not defined, please select a LEMP stack."
+if [ -z "${STACK_NAME}" ]; then
+	warning_msg "${C_Yellow}\$STACK_NAME${C_Reset} is not defined, please select a LEMP stack."
 	# Select a LEMP stack using the new function, defines ${STACK_NAME}
 	select_lemp_stack
 else
-	success_msg "${C_Yellow}\$STACK_NAME${C_Reset} is defined as '${C_Yellow}${STACK_NAME}${C_Reset}'. Proceeding..."
+	debug_success_msg "${C_Yellow}\$STACK_NAME${C_Reset} is defined as '${C_Yellow}${STACK_NAME}${C_Reset}'. Proceeding..."
 fi
 
 source_lemp_stack_env ${STACK_NAME}
@@ -49,6 +49,7 @@ fi
 # LEMP_DB_ROOT_PASSWORD_FILE="$LEMP_PATH/secrets/db_root_user_password.txt"
 # Read MySQL root password from secrets file
 export MYSQL_ROOT_PASSWORD=$(cat "$DB_ROOT_USER_PASSWORD_FILE")
+ROOT_PW="$MYSQL_ROOT_PASSWORD"
 
 # Back to the LEMP stack directory
 cd "${LEMP_PATH}"
@@ -58,51 +59,41 @@ changed_to_dir_msg "/${LEMP_DIR}"
 status_msg "${C_Yellow}$(pwd)"
 line_break
 
+heading "CREATE WORDPRESS DATABASE"
+body_msg "Check if '$WORDPRESS_DB_NAME' exists if not create it and create user..."
 # Check if database exists
-DB_EXISTS=$(docker exec -i "${DB_HOST_NAME}" mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -s -N -e "SHOW DATABASES LIKE '$WORDPRESS_DB_NAME';" 2>/dev/null)
+DB_EXISTS=$(docker exec -i "${DB_HOST_NAME}" mysql -u root -p"${ROOT_PW}" -s -N -e "SHOW DATABASES LIKE '${WORDPRESS_DB_NAME}';" 2>/dev/null)
 
-if [[ -n "$DB_EXISTS" ]]; then
+if [ -n "$DB_EXISTS" ]; then
+
 	#####################################################
 	# DATABASE ALREADY EXISTS
-
-	heading "WORDPRESS DATABASE"
 	status_msg "✅ Database ${C_Yellow}'$WORDPRESS_DB_NAME' ${C_Reset}already exists."
 	line_break
 else
 	#####################################################
 	# CREATE WORDPRESS DATABASE
 
-	heading "CREATING WORDPRESS DATABASE"
-	generating_msg "Creating database in the LEMP container: ${C_Yellow}${LEMP_CONTAINER_NAME}${C_Reset}'s ${C_Yellow}${DB_HOST_NAME}${C_Reset} container"
+	section_msg "INITIALIZE WORDPRESS DATABASE"
+
+	generating_msg "Create database '${C_Yellow}$WORDPRESS_DB_NAME${C_Reset}' in ${C_Yellow}${LEMP_CONTAINER_NAME}${C_Reset}'s ${C_Yellow}${DB_HOST_NAME}${C_Reset} container" ${C_BrightWhite}
+	generating_msg "Creating user '${C_Yellow}$WORDPRESS_DB_USER${C_Reset}' in database '${C_Yellow}$WORDPRESS_DB_NAME${C_Reset}'" ${C_BrightWhite}
 	line_break
-	generating_msg "Creating database: ${C_Yellow}'$WORDPRESS_DB_NAME'${C_Reset} and user: ${C_Yellow}'$WORDPRESS_DB_USER'"
-	line_break
 
-	# Detect MySQL Version inside the Docker Container
-	MYSQL_VERSION=$(docker exec -i "${DB_HOST_NAME}" mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -s -N -e "SELECT VERSION();" 2>/dev/null | cut -d'.' -f1)
-
-	if [[ "$MYSQL_VERSION" -ge 8 ]]; then
-		status_msg "🔍 Detected MySQL $MYSQL_VERSION — Using caching_sha2_password..."
-		AUTH_PLUGIN="caching_sha2_password"
-	else
-		status_msg "🔍 Detected MySQL $MYSQL_VERSION — Using mysql_native_password..."
-		AUTH_PLUGIN="mysql_native_password"
-	fi
-
-# Set the password for the new user
-	docker exec -i "${DB_HOST_NAME}" mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -s -N 2>/dev/null <<EOF >/dev/null
-CREATE DATABASE IF NOT EXISTS ${WORDPRESS_DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER IF NOT EXISTS '${WORDPRESS_DB_USER}'@'%' IDENTIFIED WITH ${AUTH_PLUGIN} BY '${WP_DB_PASSWORD}';
-GRANT ALL PRIVILEGES ON ${WORDPRESS_DB_NAME}.* TO '${WORDPRESS_DB_USER}'@'%';
+	# Create WordPress database and user (idempotent)
+	docker exec -i "${DB_HOST_NAME}" sh -lc "mysql -uroot -p\"$ROOT_PW\"" <<SQL >/dev/null 2>&1
+CREATE DATABASE IF NOT EXISTS \`${WORDPRESS_DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS '${WORDPRESS_DB_USER}'@'%' IDENTIFIED BY '${WORDPRESS_DB_USER_PASSWORD}';
+ALTER USER '${WORDPRESS_DB_USER}'@'%' IDENTIFIED BY '${WORDPRESS_DB_USER_PASSWORD}';
+GRANT ALL PRIVILEGES ON \`${WORDPRESS_DB_NAME}\`.* TO '${WORDPRESS_DB_USER}'@'%';
 FLUSH PRIVILEGES;
-EOF
+SQL
 
-	sleep 2
+	sleep 4
 
-	status_msg " Checking WP DB PASSWORD: ${C_Yellow}'$WORDPRESS_DB_NAME'${C_Reset} and user: ${C_Yellow}'$WORDPRESS_DB_USER'${C_Reset} setup complete."
-	line_break
+	section_msg "CHECK WP DB PASSWORD"
 
-	docker exec -i "${DB_HOST_NAME}" mysql -u root -p"${MYSQL_ROOT_PASSWORD}" -e "SELECT user, host, authentication_string FROM mysql.user WHERE user='${WORDPRESS_DB_USER}';"
+	docker exec -i "${DB_HOST_NAME}" mysql -u root -p"${ROOT_PW}" -e "SELECT user, host, authentication_string FROM mysql.user WHERE user='${WORDPRESS_DB_USER}';"
 
 	line_break
 	status_msg "✅ Database: ${C_Yellow}'$WORDPRESS_DB_NAME'${C_Reset} and user: ${C_Yellow}'$WORDPRESS_DB_USER'${C_Reset} setup complete."

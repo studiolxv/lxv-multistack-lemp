@@ -2,14 +2,16 @@
 . "$PROJECT_PATH/_environment.sh"
 file_msg "$(basename "$0")"
 
-#
+line_break
+heading "WORDPRESS .ENV FILE"
+
 # SOURCE LEMP STACK .ENV
 if [[ -z "${STACK_NAME}" ]]; then
-	status_msg "${C_Yellow}\$STACK_NAME${C_Reset} is not defined, please select a LEMP stack."
+	warning_msg "${C_Yellow}\$STACK_NAME${C_Reset} is not defined, please select a LEMP stack."
 	# Select a LEMP stack using the new function, defines ${STACK_NAME}
 	select_lemp_stack
 else
-	success_msg "${C_Yellow}\$STACK_NAME${C_Reset} is defined as '${C_Yellow}${STACK_NAME}${C_Reset}'. Proceeding..."
+	debug_success_msg "${C_Yellow}\$STACK_NAME${C_Reset} is defined as '${C_Yellow}${STACK_NAME}${C_Reset}'. Proceeding..."
 fi
 
 source_lemp_stack_env ${STACK_NAME}
@@ -23,8 +25,20 @@ else
 	status_msg "🔍 ${C_Reset}$WORDPRESS_PATH/.env file ${C_Red}not found."
 	line_break
 	status_msg "   ${C_Yellow}Generating with dynamic variables..."
+	TIMESTAMP=$(env TZ="$OS_TZ" date +"%Y-%m-%d_%I%M%S_%p_%Z")
 
 	cat <<EOL >"$WORDPRESS_ENV_FILE"
+# ENVIRONMENT VARIABLES
+# Created $TIMESTAMP
+#
+# MULTISTACK
+ADMIN_EMAIL="${ADMIN_EMAIL}"
+PROJECT_PATH="${PROJECT_PATH}"
+PROJECT_NAME="${PROJECT_NAME}"
+STACKS_PATH="${STACKS_PATH}"
+SCRIPTS_PATH="${SCRIPTS_PATH}"
+FUNCTIONS_PATH="${FUNCTIONS_PATH}"
+#
 # LEMP
 DB_HOST_NAME="${DB_HOST_NAME}"
 LEMP_NETWORK_NAME="${LEMP_NETWORK_NAME}"
@@ -44,10 +58,12 @@ WORDPRESS_SUBDOMAIN_NAME="${WORDPRESS_SUBDOMAIN_NAME}"
 WORDPRESS_SUBDOMAIN="${WORDPRESS_SUBDOMAIN}"
 #
 # WORDPRESS DATABASE
-WORDPRESS_DB_NAME="${WORDPRESS_DB_NAME}"
-WORDPRESS_DB_USER="${WORDPRESS_DB_USER}"
-WORDPRESS_DB_USER_PASSWORD="${WORDPRESS_DB_USER_PASSWORD}"
-WORDPRESS_TABLE_PREFIX="wp_"
+WORDPRESS_DB_HOST="\${DB_HOST_NAME}:3306"
+WORDPRESS_DB_NAME="\${WORDPRESS_DB_NAME}"
+WORDPRESS_DB_USER="\${WORDPRESS_DB_USER}"
+WORDPRESS_DB_USER_PASSWORD="\${WORDPRESS_DB_USER_PASSWORD}"
+
+WORDPRESS_TABLE_PREFIX="${WORDPRESS_TABLE_PREFIX}"
 WORDPRESS_ADMIN_USER_EMAIL="${WORDPRESS_ADMIN_USER_EMAIL}"
 WORDPRESS_ADMIN_USER="${WORDPRESS_ADMIN_USER}"
 WORDPRESS_ADMIN_USER_PASSWORD="${WORDPRESS_ADMIN_USER_PASSWORD}"

@@ -10,17 +10,17 @@ export LEMP_SERVER_DOMAIN_TLD_DEFAULT="test"
 
 section_title "LEMP STACK NAME & LEMP DOMAIN NAME"
 
-example_msg "${C_Cyan}EXAMPLE"
+example_msg "EXAMPLE"
 example_msg
-example_msg "${C_Cyan}This example is using a ${C_Underline}random word${C_Reset}${C_Cyan} generator to create a unique LEMP stack name and server domain name."
+example_msg "This example is using a ${C_Cyan}random word${C_Reset} generator to create a unique LEMP stack name and server domain name."
 example_msg
 example_msg "Random word: ${C_Cyan}${C_Underline}${LEMP_SERVER_DOMAIN_NAME_DEFAULT}${C_Reset}"
 example_msg
-example_msg "${C_Cyan}\$LEMP_DIR: ${C_Reset}Names the directory in which the LEMP Stack files are located"
+example_msg "${C_Cyan}${C_Underline}\$LEMP_DIR: ${C_Reset}Names the directory in which the LEMP Stack files are located"
 example_msg
 example_msg "- ${STACKS_PATH}/${C_Cyan}${C_Underline}${LEMP_SERVER_DOMAIN_NAME_DEFAULT}${C_Reset}"
 example_msg
-example_msg "${C_Cyan}\$LEMP_SERVER_DOMAIN_NAME: ${C_Reset}Names the local development domain (separate from the nested WordPress domains)"
+example_msg "${C_Cyan}${C_Underline}\$LEMP_SERVER_DOMAIN_NAME: ${C_Reset}Names the local development domain (separate from the nested WordPress domains)"
 example_msg
 example_msg "- https://${C_Cyan}${C_Underline}${LEMP_SERVER_DOMAIN_NAME_DEFAULT}${C_Reset}.${LEMP_SERVER_DOMAIN_TLD_DEFAULT}"
 line_break

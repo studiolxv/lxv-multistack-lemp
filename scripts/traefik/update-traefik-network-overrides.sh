@@ -1,8 +1,8 @@
-#
+#!/bin/sh
 # Resolve project and stacks paths if not provided
 : ${PROJECT_PATH:=$(cd "$(dirname "$0")/../.." && pwd)}
 : ${STACKS_PATH:="$PROJECT_PATH/stacks"}
-#!/bin/sh
+
 OVERRIDE_FILE="$PROJECT_PATH/traefik/docker-compose.override.yml"
 
 
@@ -39,8 +39,12 @@ aliases=$(printf "%s\n" $aliases | sort -u)
   echo "  traefik:"
   echo "    networks:"
   echo "      traefik_network:"
+if [ -n "$aliases" ]; then
   echo "        aliases:"
   for alias in $aliases; do
     echo "          - $alias"
   done
+else
+  echo "        aliases: []"
+fi
 } > "$OVERRIDE_FILE"

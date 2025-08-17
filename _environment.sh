@@ -161,6 +161,13 @@ else
 	wait
 
 	#####################################################
+	# DEFAULT LEMP STACK IMAGES FOR NEW STACKS
+	export DEFAULT_DB_IMAGE="mysql:latest"
+	export DEFAULT_PHP_IMAGE="php:8.5-rc-fpm-bullseye" # Needs to be FPM version
+	export DEFAULT_PMA_IMAGE="phpmyadmin:latest"
+	export DEFAULT_WP_IMAGE="wordpress:latest" #"wordpress:latest"
+
+	#####################################################
 	# VARIABLES REQUIRING FUNCTIONS
 
 	# Detect OS type
@@ -200,9 +207,9 @@ else
 
 		error_msg "No admin email provided. ${C_Reset}Using \"admin@example.com\")"
 
-		ADMIN_EMAIL="admin@example.com"
+		export ADMIN_EMAIL="admin@example.com"
 	else
-		ADMIN_EMAIL="$USER_INPUT_ADMIN_EMAIL"
+		export ADMIN_EMAIL="$USER_INPUT_ADMIN_EMAIL"
 	fi
 	line_break
 
@@ -213,7 +220,14 @@ else
 	cat >"$PROJECT_PATH/.env" <<EOF
 # PROJECT: ${PROJECT_NAME}
 # Created: $(date)
-# Admin Email: ${ADMIN_EMAIL}
+#
+# MULTISTACK
+ADMIN_EMAIL="${ADMIN_EMAIL}"
+PROJECT_PATH="${PROJECT_PATH}"
+PROJECT_NAME="${PROJECT_NAME}"
+STACKS_PATH="${STACKS_PATH}"
+SCRIPTS_PATH="${SCRIPTS_PATH}"
+FUNCTIONS_PATH="${FUNCTIONS_PATH}"
 #
 # OS
 OS_TZ="${OS_TZ}"
@@ -222,12 +236,6 @@ OS_TYPE="${OS_TYPE}"
 OS_DOCKER_IMAGE_PLATFORM="${OS_DOCKER_IMAGE_PLATFORM}"
 HOSTS_FILE="${HOSTS_FILE}"
 HOSTS_FILE_LOOPBACK_IP="${HOSTS_FILE_LOOPBACK_IP}"
-#
-PROJECT_NAME="${PROJECT_NAME}"
-PROJECT_PATH="${PROJECT_PATH}"
-STACKS_PATH="${STACKS_PATH}"
-SCRIPTS_PATH="${SCRIPTS_PATH}"
-FUNCTIONS_PATH="${FUNCTIONS_PATH}"
 #
 # TRAEFIK
 TRAEFIK_DIR="${TRAEFIK_DIR}"
@@ -250,6 +258,11 @@ ADMIN_EMAIL="${ADMIN_EMAIL}"
 #
 # LOG FILE
 LOG_FILE="${LOG_FILE}"
+# DEFAULT LEMP STACK IMAGES
+DEFAULT_DB_IMAGE="${DEFAULT_DB_IMAGE}"
+DEFAULT_PHP_IMAGE="${DEFAULT_PHP_IMAGE}"
+DEFAULT_PMA_IMAGE="${DEFAULT_PMA_IMAGE}"
+DEFAULT_WP_IMAGE="${DEFAULT_WP_IMAGE}"
 EOF
 
 generating_msg ".env Environment variables created successfully."

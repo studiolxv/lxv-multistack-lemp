@@ -3,7 +3,7 @@
 file_msg "$(basename "$0")"
 
 # Display Menu
-heading "MULTISTACK LEMP STACK"
+heading "DOCKER MULTISTACK LEMP"
 
 # Display Environment Variables
 project_info
@@ -20,7 +20,7 @@ done
 options="$options|Help|Quit"
 
 # Display Options
-section_title "STACK OPTIONS" ${C_Magenta}
+section_title "MULTISTACK OPTIONS" ${C_Magenta}
 i=1
 OLD_IFS=$IFS; IFS='|' # Set delimiter for correct iteration
 for option in $options; do

@@ -3,6 +3,18 @@
 file_msg "$(basename "$0")"
 
 #####################################################
+# SOURCE LEMP STACK .ENV
+if [[ -z "${STACK_NAME}" ]]; then
+	warning_msg "${C_Yellow}\$STACK_NAME${C_Reset} is not defined, please select a LEMP stack."
+	# Select a LEMP stack using the new function, defines ${STACK_NAME}
+	select_lemp_stack
+else
+	debug_success_msg "${C_Yellow}\$STACK_NAME${C_Reset} is defined as '${C_Yellow}${STACK_NAME}${C_Reset}'. Proceeding..."
+fi
+
+source_lemp_stack_env ${STACK_NAME}
+
+#####################################################
 # NGINX PATH
 
 heading "CONFIGURING NGINX"

@@ -5,11 +5,11 @@ file_msg "$(basename "$0")"
 #####################################################
 # SOURCE LEMP STACK .ENV
 if [[ -z "${STACK_NAME}" ]]; then
-	status_msg "${C_Yellow}\$STACK_NAME${C_Reset} is not defined, please select a LEMP stack."
+	warning_msg "${C_Yellow}\$STACK_NAME${C_Reset} is not defined, please select a LEMP stack."
 	# Select a LEMP stack using the new function, defines ${STACK_NAME}
 	select_lemp_stack
 else
-	success_msg "${C_Yellow}\$STACK_NAME${C_Reset} is defined as '${C_Yellow}${STACK_NAME}${C_Reset}'. Proceeding..."
+	debug_success_msg "${C_Yellow}\$STACK_NAME${C_Reset} is defined as '${C_Yellow}${STACK_NAME}${C_Reset}'. Proceeding..."
 fi
 
 source_lemp_stack_env ${STACK_NAME}
@@ -18,8 +18,8 @@ source_lemp_stack_env ${STACK_NAME}
 # WORDPRESS: DATABASE NAME
 
 heading "WORDPRESS: DATABASE NAME"
-status_msg "${C_Yellow}Enter WordPress database name. Leave blank to use: \"${C_Underline}${WORDPRESS_SUBDOMAIN_NAME}${C_Reset}${C_Yellow}\":"
-line_break
+option_question "Enter WordPress database name. Leave blank to use: \"${C_Underline}${WORDPRESS_SUBDOMAIN_NAME}${C_Reset}${C_Yellow}\":"
+
 printf "%s " "$(input_cursor)"
 read USER_INPUT_DB_NAME
 
@@ -38,15 +38,15 @@ else
 fi
 
 line_break
-status_msg "${C_Underline}WORDPRESS_DB_NAME${C_Reset}: '${C_Yellow}$WORDPRESS_DB_NAME${C_Reset}'"
-
+input_cursor "${C_Underline}WORDPRESS_DB_NAME${C_Reset}: '${C_Yellow}$WORDPRESS_DB_NAME${C_Reset}'"
+line_break
 #####################################################
 # WORDPRESS: DATABASE TABLE PREFIX
 
 DEFAULT_WORDPRESS_TABLE_PREFIX="wp_"
 
 heading "WORDPRESS: DATABASE TABLE PREFIX"
-status_msg "${C_Yellow}Enter WordPress database table prefix name. Leave blank to use: \"${C_Underline}${DEFAULT_WORDPRESS_TABLE_PREFIX}${C_Reset}${C_Yellow}\":"
+option_question "Enter WordPress database table prefix name. Leave blank to use: \"${C_Underline}${DEFAULT_WORDPRESS_TABLE_PREFIX}${C_Reset}${C_Yellow}\":"
 line_break
 printf "%s " "$(input_cursor)"
 read USER_INPUT_WORDPRESS_TABLE_PREFIX
@@ -60,14 +60,13 @@ else
 	WORDPRESS_TABLE_PREFIX="$USER_INPUT_WORDPRESS_TABLE_PREFIX"
 fi
 line_break
-status_msg "${C_Underline}WORDPRESS_DB_NAME${C_Reset}: '${C_Yellow}$WORDPRESS_TABLE_PREFIX${C_Reset}'"
-
+input_cursor "${C_Underline}WORDPRESS_DB_NAME${C_Reset}: '${C_Yellow}$WORDPRESS_TABLE_PREFIX${C_Reset}'"
+line_break
 #####################################################
 # WORDPRESS: DATABASE USER NAME
 
 heading "WORDPRESS: DATABASE USER NAME"
-status_msg "Enter a WordPress database username, or leave blank to auto-generate a secure username:"
-line_break
+option_question "Enter a WordPress database username, or leave blank to auto-generate a secure username:"
 printf "%s " "$(input_cursor)"
 read USER_INPUT_DB_USER
 
@@ -99,7 +98,7 @@ fi
 
 line_break
 status_msg "${C_Underline}WORDPRESS_DB_USER_PASSWORD${C_Reset}: Will be saved to '${C_Yellow}${WORDPRESS_DIR}/secrets/wp_db_user.txt${C_Reset}'"
-
+line_break
 WORDPRESS_DB_USER="${WORDPRESS_DB_USER}"
 
 #####################################################
@@ -108,8 +107,7 @@ WORDPRESS_DB_USER="${WORDPRESS_DB_USER}"
 heading "WORDPRESS: DATABASE USER PASSWORD"
 # Prompt User for WP Database Password
 
-status_msg "Enter a WordPress database password for your wp db user, or leave blank to auto-generate a secure password:"
-line_break
+option_question "Enter a WordPress database password for your wp db user, or leave blank to auto-generate a secure password:"
 printf "%s " "$(input_cursor)"
 read USER_INPUT_DB_PASSWORD
 

@@ -1,15 +1,14 @@
 #!/bin/sh
 . "$PROJECT_PATH/_environment.sh"
 file_msg "$(basename "$0")"
+
 #####################################################
 # PHP
 line_break
 section_title "PHP"
 
-
 #####################################################
 # PHP PATH
-
 
 if [ -d "${LEMP_PHP_PATH}" ]; then
 line_break
@@ -28,8 +27,6 @@ line_break
 		error_msg "Failed to create '${LEMP_DIR}/${PHP_DIR}' directory, check permissions or create manually."
 	fi
 fi
-
-
 
 #####################################################
 # PHP INI FILE
@@ -70,66 +67,73 @@ fi
 
 line_break
 
-# Fetch PHP versions
 section_title "PHP-FPM IMAGE"
 
-warning_msg "NOTE: FPM version required."
-warning_msg "Typing in a non-FPM PHP image (like php:8.3 or php:8.3-apache) will break the php serving files from \"${LEMP_DIR}/html\" that expect an FPM listener on port 9000."
-warning_msg "This php version you are picking now is completely separate from any Wordpress container image's PHP version you create within this stack."
-warning_msg "You can use any PHP version you want here, even if it is different from the Wordpress image's PHP version."
-line_break
-body_msg "🔃   Fetching latest docker images of PHP... be patient, this may take a few minutes."
+if [ -n "${DEFAULT_PHP_IMAGE:-}" ]; then
+    input_cursor "DEFAULT_PHP_IMAGE is defined: $DEFAULT_PHP_IMAGE"
+	PHP_IMAGE="$DEFAULT_PHP_IMAGE"
+else
+    warning_msg "DEFAULT_PHP_IMAGE is not defined"
 
-PHP_VERSIONS=$(fetch_all_latest_minor_versions php '(fpm$|fpm-)')
+	warning_msg "NOTE: FPM version required."
+	warning_msg "Typing in a non-FPM PHP image (like php:8.3 or php:8.3-apache) will break the php serving files from \"${LEMP_DIR}/html\" that expect an FPM listener on port 9000."
+	warning_msg "This php version you are picking now is completely separate from any Wordpress container image's PHP version you create within this stack."
+	warning_msg "You can use any PHP version you want here, even if it is different from the Wordpress image's PHP version."
+	line_break
+	body_msg "🔃   Fetching latest docker images of PHP... be patient, this may take a few minutes."
+
+	PHP_VERSIONS=$(fetch_all_latest_minor_versions php '(fpm$|fpm-)')
 
 
-# Dynamically populate selection list
-INDEX=1
-AVAILABLE_IMAGES=""
-line_break
-section_title "PHP VERSION OPTIONS" ${C_Magenta}
+	# Dynamically populate selection list
+	INDEX=1
+	AVAILABLE_IMAGES=""
+	line_break
+	section_title "PHP VERSION OPTIONS" ${C_Magenta}
 
-# Add PHP images to selection
-for VERSION in $PHP_VERSIONS; do
-	AVAILABLE_IMAGES="$AVAILABLE_IMAGES\n$INDEX php:$VERSION"
-	option_msg "$INDEX. php:$VERSION" ${C_Magenta}
-	INDEX=$((INDEX + 1))
-done
+	# Add PHP images to selection
+	for VERSION in $PHP_VERSIONS; do
+		AVAILABLE_IMAGES="$AVAILABLE_IMAGES\n$INDEX php:$VERSION"
+		option_msg "$INDEX. php:$VERSION" ${C_Magenta}
+		INDEX=$((INDEX + 1))
+	done
 
-# Add custom option
-option_msg "$INDEX. Enter your own" ${C_Magenta}
+	# Add custom option
+	option_msg "$INDEX. Enter your own" ${C_Magenta}
 
-line_break
-option_question "Select your preferred PHP Docker image:"
+	line_break
+	option_question "Select your preferred PHP Docker image:"
 
-# Read user input dynamically
-while true; do
-	printf "%s" "$(input_cursor)"
-	read CHOICE
-
-	# Find the matching choice
-	CHOSEN_IMAGE=$(printf "%b" "$AVAILABLE_IMAGES" | awk -v choice="$CHOICE" '$1 == choice {print $2}')
-
-	if [ -n "$CHOSEN_IMAGE" ]; then
-		PHP_IMAGE="$CHOSEN_IMAGE"
-		break
-	elif [ "$CHOICE" -eq "$INDEX" ]; then
-		line_break
-		option_msg "Other: Enter your preferred PHP Docker image tag (e.g. \"php:8.1-fpm\"):"
+	# Read user input dynamically
+	while true; do
 		printf "%s" "$(input_cursor)"
-		read PHP_IMAGE
-		PHP_IMAGE="${PHP_IMAGE}"
-		break
-	else
-		error_msg "Invalid choice, please try again."
-	fi
-done
+		read CHOICE
 
-input_cursor "Selected PHP image: ${C_Magenta}${PHP_IMAGE}${C_Reset}"
+		# Find the matching choice
+		CHOSEN_IMAGE=$(printf "%b" "$AVAILABLE_IMAGES" | awk -v choice="$CHOICE" '$1 == choice {print $2}')
+
+		if [ -n "$CHOSEN_IMAGE" ]; then
+			PHP_IMAGE="$CHOSEN_IMAGE"
+			break
+		elif [ "$CHOICE" -eq "$INDEX" ]; then
+			line_break
+			option_msg "Other: Enter your preferred PHP Docker image tag (e.g. \"php:8.1-fpm\"):"
+			printf "%s" "$(input_cursor)"
+			read PHP_IMAGE
+			PHP_IMAGE="${PHP_IMAGE}"
+			break
+		else
+			error_msg "Invalid choice, please try again."
+		fi
+	done
+
+	input_cursor "Selected PHP image: ${C_Magenta}${PHP_IMAGE}${C_Reset}"
+fi
+
 line_break
 
 #####################################################
-# CREATE LEMP STACK
+# EXPORT
 export PHP_IMAGE="${PHP_IMAGE}"
 export PHPMYADMIN_FILE_CONF="${PHPMYADMIN_PATH}/phpmyadmin.conf"
 

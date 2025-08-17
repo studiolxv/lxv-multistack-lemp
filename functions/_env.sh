@@ -7,7 +7,7 @@ source_lemp_stack_env() {
 	local stack_env="${STACKS_PATH}/${stack_name}/.env"
 	if [ -f "${stack_env}" ]; then
 		. "${stack_env}"
-		success_msg "${C_Yellow}${stack_name}/.env${C_Reset} sourced successfully. Proceeding... "
+		debug_success_msg "${C_Yellow}${stack_name}/.env${C_Reset} sourced successfully. Proceeding... "
 
 	else
 		error_msg "source_lemp_stack_env(): The stack environment file '${stack_env}' does not exist."
@@ -22,7 +22,7 @@ source_wordpress_stack_env() {
 
 	if [ -f "${stack_env}" ]; then
 		. "${stack_env}"
-		success_msg "${C_Yellow}${stack_name}/.env${C_Reset} sourced successfully. Proceeding... "
+		debug_success_msg "${C_Yellow}${stack_name}/.env${C_Reset} sourced successfully. Proceeding... "
 	else
 		error_msg "source_wordpress_stack_env(): The stack environment file '${stack_env}' does not exist."
 		exit 1
@@ -33,7 +33,7 @@ source_wordpress_stack_env() {
 
 	if [ -f "${wordpress_env}" ]; then
 		. "${wordpress_env}"
-		success_msg "${C_Yellow}${wordpress_name}/.env${C_Reset} sourced successfully. Proceeding... "
+		debug_success_msg "${C_Yellow}${wordpress_name}/.env${C_Reset} sourced successfully. Proceeding... "
 
 	else
 		error_msg "source_wordpress_stack_env(): The stack environment file '${wordpress_env}' does not exist."

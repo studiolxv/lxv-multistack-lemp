@@ -100,11 +100,25 @@ FLUSH PRIVILEGES;
 SQL
 " >/dev/null 2>&1 || warning_msg "MySQL post-initialization may have partially failed. Check container logs."
 
+
 #####################################################
-# COMPLETE
+# WAIT TIL DB SERVICE CONTAINER READY
+
+# Wait for the WordPress service container to be healthy or running
+if ! wait_for_container_ready "$DB_HOST_NAME" 180 2; then
+    warning_msg "${C_Yellow}Timed out waiting for '$DB_HOST_NAME' to be healthy.${C_Reset} Proceeding anyway."
+fi
+
+#####################################################
+# LEMP: SUCCESS MESSAGE
 
 heading "SUCCESS"
 success_msg "🎉 ${C_Green}LEMP Stack \"${NEW_STACK_NAME}\" successfully set up."
 
 lemp_started_message "${LEMP_SERVER_DOMAIN_NAME}"
 lemp_host_file_trusted_cert_message
+
+line_break
+
+cd ${PROJECT_PATH} || exit
+sh "${SCRIPTS_PATH}/multistack/manage-multistack.sh"

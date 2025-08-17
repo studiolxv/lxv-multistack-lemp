@@ -1,4 +1,4 @@
-FROM wordpress:latest
+FROM <<REPLACE_WP_IMAGE>>
 
 # Install required dependencies
 RUN apt update && apt install -y libxml2-dev \

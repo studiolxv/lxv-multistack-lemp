@@ -2,15 +2,17 @@
 . "$PROJECT_PATH/_environment.sh"
 file_msg "$(basename "$0")"
 
+line_break
+heading "TRAEFIK: DYNAMIC CONFIG"
 #####################################################
 # SOURCE LEMP STACK .ENV
 
 if [[ -z "${STACK_NAME}" ]]; then
-	status_msg "${C_Yellow}\$STACK_NAME${C_Reset} is not defined, please select a LEMP stack."
+	warning_msg "${C_Yellow}\$STACK_NAME${C_Reset} is not defined, please select a LEMP stack."
 	# Select a LEMP stack using the new function, defines ${STACK_NAME}
 	select_lemp_stack
 else
-	success_msg "${C_Yellow}\$STACK_NAME${C_Reset} is defined as '${C_Yellow}${STACK_NAME}${C_Reset}'. Proceeding..."
+	debug_success_msg "${C_Yellow}\$STACK_NAME${C_Reset} is defined as '${C_Yellow}${STACK_NAME}${C_Reset}'. Proceeding..."
 fi
 
 source_lemp_stack_env ${STACK_NAME}
@@ -18,17 +20,17 @@ source_lemp_stack_env ${STACK_NAME}
 #####################################################
 # TRAEFIK YML
 
-# Check if the .yaml file already exists
-
+# Check if the .yml file already exists
+line_break
 if [ -f "$WORDPRESS_TRAEFIK_CONFIG_YML_FILE" ]; then
-	success_msg "'traefik/dynamic/lemp-${LEMP_SERVER_DOMAIN_NAME}-${WORDPRESS_SUBDOMAIN_NAME}.yaml' file already exists:"
+	success_msg "'traefik/dynamic/lemp-${LEMP_SERVER_DOMAIN_NAME}-${WORDPRESS_SUBDOMAIN_NAME}.yml' file already exists:"
 else
-	warning_msg "'traefik/dynamic/lemp-${LEMP_SERVER_DOMAIN_NAME}-${WORDPRESS_SUBDOMAIN_NAME}.yaml' file not found"
+	warning_msg "'traefik/dynamic/lemp-${LEMP_SERVER_DOMAIN_NAME}-${WORDPRESS_SUBDOMAIN_NAME}.yml' file not found. Let's create one..."
 	line_break
-	generating_msg "Generating 'traefik.yaml' file..."
+	generating_msg "Generating 'traefik/dynamic/lemp-${LEMP_SERVER_DOMAIN_NAME}-${WORDPRESS_SUBDOMAIN_NAME}.yml' file..."
 	line_break
 	cat <<EOL >"$WORDPRESS_TRAEFIK_CONFIG_YML_FILE"
-# traefik.yaml
+# traefik.yml
 global:
   checkNewVersion: false
   sendAnonymousUsage: false
@@ -103,9 +105,9 @@ EOL
 	line_break
 
 	if [ -f "$WORDPRESS_TRAEFIK_CONFIG_YML_FILE" ]; then
-		success_msg "'traefik/dynamic/lemp-${LEMP_SERVER_DOMAIN_NAME}-${WORDPRESS_SUBDOMAIN_NAME}.yaml' created successfully"
+		success_msg "'traefik/dynamic/lemp-${LEMP_SERVER_DOMAIN_NAME}-${WORDPRESS_SUBDOMAIN_NAME}.yml' created successfully"
 	else
-		error_msg "Failed to create 'traefik/dynamic/lemp-${LEMP_SERVER_DOMAIN_NAME}-${WORDPRESS_SUBDOMAIN_NAME}.yaml', check permissions or create manually."
+		error_msg "Failed to create 'traefik/dynamic/lemp-${LEMP_SERVER_DOMAIN_NAME}-${WORDPRESS_SUBDOMAIN_NAME}.yml', check permissions or create manually."
 	fi
 fi
 

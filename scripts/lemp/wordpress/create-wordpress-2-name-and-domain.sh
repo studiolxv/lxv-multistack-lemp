@@ -1,40 +1,49 @@
 #!/bin/sh
 . "$PROJECT_PATH/_environment.sh"
 file_msg "$(basename "$0")"
+#####################################################
+# WORDPRESS: SUBDOMAIN NAME
+
+heading "WORDPRESS: CONTAINER NAME & SUBDOMAIN"
 
 #####################################################
 # SOURCE LEMP STACK .ENV
 if [[ -z "${STACK_NAME}" ]]; then
-	status_msg "${C_Yellow}\$STACK_NAME${C_Reset} is not defined, please select a LEMP stack."
+	warning_msg "${C_Yellow}\$STACK_NAME${C_Reset} is not defined, please select a LEMP stack."
 	# Select a LEMP stack using the new function, defines ${STACK_NAME}
 	select_lemp_stack
 else
-	success_msg "${C_Yellow}\$STACK_NAME${C_Reset} is defined as '${C_Yellow}${STACK_NAME}${C_Reset}'. Proceeding..."
+	debug_success_msg "${C_Yellow}\$STACK_NAME${C_Reset} is defined as '${C_Yellow}${STACK_NAME}${C_Reset}'. Proceeding..."
 fi
 
 source_lemp_stack_env ${STACK_NAME}
 
-#####################################################
-# WORDPRESS: SUBDOMAIN NAME
+export WORDPRESS_SUBDOMAIN_NAME_DEFAULT="$(shuf -n1 /usr/share/dict/words | tr '[:upper:]' '[:lower:]')-$(shuf -n1 /usr/share/dict/words | tr '[:upper:]' '[:lower:]')"
 
-heading "WORDPRESS: SUBDOMAIN NAME"
-status_msg "This will be the subdomain used for your Wordpress site url ${C_Yellow}${C_Underline}EXAMPLE${C_Reset}: https://${C_Yellow}subdomain${C_Reset}.${LEMP_SERVER_DOMAIN}${C_Reset}."
-status_msg "${C_Yellow}${C_Underline}NOTE${C_Reset}: Do not add a '.' or '.\${TLD}' to the end (.test, .localhost, etc.)"
-
+example_msg "EXAMPLE"
+example_msg
+example_msg "This example is using a ${C_Cyan}random word${C_Reset} generator to create a unique Wordpress subdomain name."
+example_msg
+example_msg "Random word: ${C_Cyan}${C_Underline}${WORDPRESS_SUBDOMAIN_NAME_DEFAULT}${C_Reset}"
+example_msg
+example_msg "This will be the subdomain used for your Wordpress site url (e.g.  https://${C_Cyan}${C_Underline}${WORDPRESS_SUBDOMAIN_NAME_DEFAULT}${C_Reset}.${LEMP_SERVER_DOMAIN}${C_Reset})."
+example_msg
+warning_msg "NOTE: Do not add a '.' or '.\${TLD}' to the end (.test, .localhost, etc.)"
+warning_msg "leave blank to use the random word: ${C_Cyan}${C_Underline}${WORDPRESS_SUBDOMAIN_NAME_DEFAULT}${C_Reset}"
 line_break
+
+section_title "ENTER NAME" ${C_Magenta}
 # Prompt user for the domain name used in local ssl development
-status_msg "${C_Yellow}What subdomain name you want to use? Leave blank to use: \"${C_Underline}${WORDPRESS_DIR}${C_Reset}\":"
-line_break
+option_question "What subdomain name you want to use?"
 printf "%s" "$(input_cursor)"
 read USER_INPUT_WORDPRESS_SUBDOMAIN_NAME
 
-DEFAULT_WORDPRESS_SUBDOMAIN_NAME="${WORDPRESS_DIR}"
 
 if [ -z "$USER_INPUT_WORDPRESS_SUBDOMAIN_NAME" ]; then
 	# Default to "$WORDPRESS_DIR" if no input is provided
 	line_break
-	status_msg "No virtual host subdomain name provided. ${C_Reset}Using '${C_Yellow}${DEFAULT_WORDPRESS_SUBDOMAIN_NAME}${C_Reset}'"
-	export WORDPRESS_SUBDOMAIN_NAME="${DEFAULT_WORDPRESS_SUBDOMAIN_NAME}"
+	input_cursor "No virtual host subdomain name provided. ${C_Reset}Using '${C_Magenta}${WORDPRESS_SUBDOMAIN_NAME_DEFAULT}${C_Reset}'"
+	export WORDPRESS_SUBDOMAIN_NAME="${WORDPRESS_SUBDOMAIN_NAME_DEFAULT}"
 else
 	export WORDPRESS_SUBDOMAIN_NAME="$USER_INPUT_WORDPRESS_SUBDOMAIN_NAME"
 fi

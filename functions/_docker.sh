@@ -141,3 +141,30 @@ is_docker_compose_running() {
 	fi
 }
 export -f is_docker_compose_running
+
+# Wait until a container is healthy (or at least running if no healthcheck)
+# Example: wait_for_container_ready "some-container-name" 120 3
+wait_for_container_ready() {
+    cn=$1
+    timeout=${2:-180}
+    interval=${3:-2}
+    elapsed=0
+
+    while :; do
+        health=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$cn" 2>/dev/null)
+        running=$(docker inspect --format='{{.State.Running}}' "$cn" 2>/dev/null)
+
+        if [ "$health" = "healthy" ] || { [ "$health" = "none" ] && [ "$running" = "true" ]; }; then
+            return 0
+        fi
+
+        if [ "$elapsed" -ge "$timeout" ]; then
+            return 1
+        fi
+
+        status_msg "Waiting for container '$cn' to be healthy/running... (${elapsed}s/${timeout}s)"
+        sleep "$interval"
+        elapsed=$((elapsed + interval))
+    done
+}
+export -f wait_for_container_ready

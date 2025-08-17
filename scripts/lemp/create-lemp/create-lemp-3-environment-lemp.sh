@@ -18,7 +18,7 @@ export LEMP_PATH="${NEW_STACK_PATH}"
 
 # LEMP Docker Compose .yaml File
 export LEMP_DOCKER_COMPOSE_YML="${LEMP_PATH}/docker-compose.yml"
-export LEMP_NETWORK_NAME="${LEMP_CONTAINER_NAME}_network"
+export LEMP_NETWORK_NAME="$(echo "${LEMP_CONTAINER_NAME}_network" | tr '-' '_')"
 
 # DIRECTORIES
 export PHP_PUBLIC_DIR="html"

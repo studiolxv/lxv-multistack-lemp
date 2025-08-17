@@ -4,6 +4,35 @@ This project runs **multiple independent LEMP stacks** in **Docker**, each in it
 
 ---
 
+## How the Multistack Setup Works
+
+### Traefik Container
+
+- Runs traefik to route browsers to each LEMP Stack virtual host domain and subdomains in traefik/dynamic.
+- Building LEMP Stacks creates a new virtual host config file in traefik/dynamic. (ie https://<LEMP_DOMAIN>, https://phpmyadmin.<LEMP_DOMAIN>)
+- Building Wordpress Containers creates a new virtual host subdomain for parent LEMP's domain config file in traefik/dynamic. (ie https://<WORDPRESS_SUBDOMAIN>.<LEMP_DOMAIN>)
+
+
+### LEMP Compose Stack(s)
+
+- Creates new virutal host domains, Nginx, MySQL, PHP, and phpMyAdmin
+- Unique PHP root directory and independant PHP version for files hosted from the $STACK_NAME/ directory.
+- LEMP's MySQL container contains all databases unique to the LEMP stack and databases created for Wordpress containers under this LEMP STACK.
+- LEMP's PHP container version DOES NOT affect LEMP STACK phpMyAdmin NOR WordPress container's PHP version.
+- LEMP STACK phpMyAdmin routed under LEMP STACK's main domain, (ie https://phpmyadmin.<LEMP_DOMAIN>)
+- LEMP STACK phpMyAdmin container runs its on PHP version inside its own container.
+- LEMP STACK phpMyAdmin container connects to the LEMP's MYSQL container hosting databases unique to the LEMP stack.
+
+### LEMP Compose Stack(s) -> WordPress Container(s)
+
+- Creates a new subdomain under LEMP STACK's main domain, and unique traefik config file for this subdomain
+- Connects to the LEMP Stack docker network LEMP STACK MYSQL container to create database during set up of this WordPress container.
+- Wordpress images contain its own PHP version. (ie wordpress:latest = PHP likely > 8.x.x)
+- DOES NOT use the LEMP STACK PHP container.
+- Runs independently.
+
+---
+
 ## Architecture Overview
 
 Each **LEMP stack** runs in Docker and includes:
@@ -95,6 +124,49 @@ All automation is implemented in **portable POSIX shell** (no Bash-only features
 ### Directory Layout (example)
 
 ```
+
+.
+├── _environment				# Sets up variables for .env
+├── functions
+├── scripts
+├── stacks
+│   └── <domain_one>			# Stack container example
+│       ├── backup.log
+│       ├── containers			# Where Wordpress containers live
+│       ├── crontab
+│       ├── docker-compose.yml
+│       ├── html
+│       │   └── index.php		#
+│       ├── log
+│       ├── mysql-<DB_IMAGE>
+│       │   ├── backups			# Automated backups
+│       │   ├── data
+│       ├── nginx
+│       ├── php
+│       ├── phpmyadmin
+│       ├── scripts
+│       │   ├── lemp-backup.sh
+│       │   ├── lemp-cleanup-backups.sh
+│       │   ├── lemp-env.sh
+│       │   ├── lemp-ghost-backup-restore.sh
+│       │   ├── lemp-init.sh
+│       │   ├── lemp-optimize-wp.sh
+│       │   └── mysql-healthcheck.sh
+│       └── secrets
+│           ├── db_root_user_password.txt		# Dynamically created
+│           └── db_root_user.txt
+├── start.sh                                     # Run this to start
+├── templates
+└── traefik
+    ├── certs
+    │   ├── <domain_one>.test.crt
+    │   └── <domain_one>.test.key
+    ├── docker-compose.override.yml
+    ├── docker-compose.yml
+    ├── dynamic
+    │   ├── certs.yml
+    │   ├── lemp-<domain_one>.yml
+    └── traefik.yml
 .
 ├─ scripts/
 │  ├─ create-lemp-1.sh
