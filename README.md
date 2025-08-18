@@ -1,6 +1,6 @@
-# Multi-Stack LEMP Setup (Docker-Based + Shell Automation)
+# Multi-Stack LEMP Setup for Wordpress (Docker-Based + Shell Automation)
 
-This project runs **multiple independent LEMP stacks** in **Docker**, each in its own isolated environment with unique domains, services, and configurations. All lifecycle tasks (create, update, list, remove, backup, restore) are automated via **POSIX-compliant shell scripts**.
+This project automates the creation of multiple independent **LEMP stacks** in **Docker**, as well as automating the creation of Wordpress container within a LEMP stack's virtual host domain.
 
 ---
 
@@ -8,10 +8,9 @@ This project runs **multiple independent LEMP stacks** in **Docker**, each in it
 
 ### Traefik Container
 
-- Runs traefik to route browsers to each LEMP Stack virtual host domain and subdomains in traefik/dynamic.
+- Runs traefik to route browsers to each LEMP Stack virtual host domain and subdomains.
 - Building LEMP Stacks creates a new virtual host config file in traefik/dynamic. (ie https://<LEMP_DOMAIN>, https://phpmyadmin.<LEMP_DOMAIN>)
-- Building Wordpress Containers creates a new virtual host subdomain for parent LEMP's domain config file in traefik/dynamic. (ie https://<WORDPRESS_SUBDOMAIN>.<LEMP_DOMAIN>)
-
+- Building Wordpress Containers creates a new virtual host subdomain for parent LEMP's domain config file. (ie https://<WORDPRESS_SUBDOMAIN>.<LEMP_DOMAIN>)
 
 ### LEMP Compose Stack(s)
 
@@ -283,11 +282,10 @@ sh start.sh
 ---
 
 ## Notes
-
 - Each LEMP stack runs in **its own Docker network** named after the stack to avoid cross-talk.
 - Traefik is the **entry point** for all HTTP/HTTPS traffic; dynamic files are **generated** (don’t hand-edit generated files).
 - Local `.test` domains use **local certificates**; production uses **Let’s Encrypt**.
 - Backups are stored per site in a predictable hierarchy with daily/monthly retention.
 - Scripts are **POSIX-compliant** to maximize portability.
-
+- This readme might be a bit confusing and a work in progress.
 ---
