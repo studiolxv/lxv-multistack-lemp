@@ -13,6 +13,9 @@
 # Multi-Stack Files
 /stacks/*
 
+# Draft Markdown Files
+*.draft.md
+
 # Docker Compose local override files
 **/docker-compose.override.yml
 

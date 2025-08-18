@@ -2,6 +2,79 @@
 
 This project automates the creation of multiple independent **LEMP stacks** in **Docker**, as well as automating the creation of Wordpress containers. Each LEMP Stack creates its own Virtual host local development domain any Wordpress container created underneath will be added as a subdomain within a LEMP stack's virtual host domain and SSL Certificate.
 
+## What is it?
+
+ CLI Utility Tool script that launches a menu system with options to manage multiple Docker LEMP stacks and their respective WordPress containers. Terminal prompts to choose tasks within each. Creating LEMP stacks, Creating Wordpress containers, and management of each.
+
+## TL;DR
+
+Open the project directory in a terminal and run
+```
+sh start.sh
+```
+This will attempt to install any package managers or packages for your specifc  operating system that will automate the process before showing you the menu system.
+
+#### Welcome Menu (example)
+```
+#     MULTISTACK OPTIONS
+#     __________________
+#
+#     > 1. Create New LEMP Stack
+#     > 2. Manage domain-one
+#     > 3. Manage domain-two
+#     > 4. Help
+#     > 5. Quit
+#
+#     >>> What would you like to do?
+#     >>>
+```
+
+#### Manage LEMP Stack Menu (example)
+```
+#     DOMAIN-ONE OPTIONS
+#     _______________________
+#
+#     > 1. Create New WordPress Container
+#     > 2. Start domain-one
+#     > 3. Restart domain-one
+#     > 4. Stop domain-one
+#     > 5. Open https://domain-one.test in Browser
+#     > 6. Open https://phpmyadmin.domain-one.test in Browser
+#     > 7. Database: Backup Dump
+#     > 8. Database: Recover Tables
+#     > 9. Remove domain-one
+#     > 10. Help
+#     > 11. Back to Main Menu
+#     > 12. Quit
+#
+#     >>> Select an option for domain-one:
+#     >>>
+```
+>⚠️  **POSIX-compatible NOTE**
+>
+
+>Only tested on macOS’s zsh/bash however written to be POSIX-compatible. The project contains code blocks where homebrew is used as the package manager for package download/install/and checks as well as including conditionals to check for os specific, e.g. Chocolatey or Scoop on Windows, however the efficacy of these code blocks were not tested. Submit pull requests if you fix anything for other operating systems.
+
+## Requirements
+- Terminal of choice – e.g. [iTerm2](https://iterm2.com/) (macOS) or your preferred terminal emulator.
+- Package manager – [Homebrew](https://docs.brew.sh/Installation) (macOS/Linux), [Chocolatey](https://chocolatey.org/install) or [Scoop](https://scoop.sh/) (Windows) to install other tools
+- [Docker Desktop / Docker Engine](https://www.docker.com/) – Docker to run containers
+- mkcert – mkcert for generating local SSL certificates (https://github.com/FiloSottile/mkcert)
+
+## Architecture Overview
+
+Each **LEMP stack** runs in Docker and includes:
+- **PHP** Empty 'html' directory to run any php code you want.
+- **Nginx** (unique server domain and configuration)
+- **MySQL or MariaDB** database served on the network allowing Wordpress containers to share the database for centralized files
+- **phpMyAdmin** Management of all wordpress database tables created underneath this LEMP stack through root user. Each Wordpress connects via unique credentials.
+- **SSL certificates** for domain and all subdomains
+
+Each **WordPress container** runs in Docker and is connected to a specific LEMP stack's database on the same network.
+- Has its own **subdomain** and inherits **SSL certificate** from its LEMP stack's domain.
+- Each Wordpress container shares the **parent LEMP stack's database** but connects to it's unique database via its own user and pass provided by your input during the terminal
+
+###### NOTE: All information below this line is a work in progress. There are alot of moving parts and documentation below was
 ---
 
 ## How the Multistack Setup Works
@@ -32,33 +105,17 @@ This project automates the creation of multiple independent **LEMP stacks** in *
 
 ---
 
-## Architecture Overview
 
-Each **LEMP stack** runs in Docker and includes:
-- **Nginx** (unique server domain and configuration)
-- **MySQL or MariaDB** database
-- **phpMyAdmin** (own subdomain)
-- **SSL certificates** for all domains (local for `.test`, Let's Encrypt for production)
 
-Each **WordPress container** runs in Docker and is connected to a specific LEMP stack:
-- Has its own **domain** and **SSL certificates**
-- Shares the **parent LEMP stack's database**
-- Can have its own **phpMyAdmin subdomain** for DB management
 
----
 
-## Goals
-
-- **Isolated Docker networks** per LEMP stack to prevent conflicts
-- **Separate scripts** for LEMP creation and WordPress container creation
-- **Automated Traefik configuration**:
-  - Detects new stacks/containers
-  - Registers domains automatically
-- **SSL Management**:
-  - Local certs for `.test` domains
-  - Let's Encrypt for production
-- Easy scripts to **list, remove, or update** stacks
-- Automated **database backups** with per-site dump folders
+### Accomplished Goals for the project
+- Forget MAMP/LAMP thats for GRAMPS
+- **Automated LEMP stacks** to quickly spin up any version of php, mysql, and wordpress and launch the browser to display phpmyadmin and main LEMP stack domain on completion of script.
+- **Isolated Docker networks** to serve various images for different projects
+- **Automated Virtual Host and Traefik configuration**:
+  - Creates locally signed certificates for virtual host domains and subdomains automatically as well as making changes to your hosts file for you.
+- Automated **database backups** per LEMP stack
 
 ---
 
@@ -80,20 +137,20 @@ graph TD
         T1(Traefik)
     end
 
-    subgraph LEMP Stack 1
+    subgraph domain-two.test
         N1(Nginx)
         DB1[(MySQL/MariaDB)]
         PMA1(phpMyAdmin)
-        WP1A(WordPress Site A)
-        WP1B(WordPress Site B)
+        WP1A(WordPress Site C subdomain-three.domain-two.test)
+        WP1B(WordPress Site D subdomain-four.domain-two.test)
     end
 
-    subgraph LEMP Stack 2
+    subgraph domain-one.test
         N2(Nginx)
         DB2[(MySQL/MariaDB)]
         PMA2(phpMyAdmin)
-        WP2A(WordPress Site A)
-        WP2B(WordPress Site B)
+        WP2A(WordPress Site A subdomain-one.domain-one.test)
+        WP2B(WordPress Site B subdomain-two.domain-one.test)
     end
 
     T1 --> N1
@@ -120,13 +177,16 @@ graph TD
 
 All automation is implemented in **portable POSIX shell** (no Bash-only features) and organized into reusable functions.
 
-### Virtual Hosts (example)
+### Virtual Hosts with SSL Certificates(example)
+View the directory layout below to see where the CLI tool places each *.crt & *.key files:
+-  /traefik/certs/*.test.crt
+-  /traefik/certs/*.test.key
 ```
-https://domain-one.test (SSL)
+https://domain-one.test
 └─ https://suddomain-one.domain-one.test
 └─ https://suddomain-two.domain-one.test
 
-https://domain-two.test (SSL)
+https://domain-two.test
 └─ https://suddomain-three.domain-two.test
 └─ https://suddomain-four.domain-two.test
 ```
@@ -177,126 +237,3 @@ docker-multistack-lemp
 
 ```
 
-### Conventions
-
-- **POSIX-only** scripts: `#!/bin/sh`, `set -eu`
-- **No** `select` or arrays; menus are numeric prompts with `read` + `case`.
-- **Idempotent**: scripts check for existing resources before creating.
-- **Safety**: refuse to run if required `.env` keys are missing.
-- **Logging**: all scripts log to `./logs/YYYY-MM-DD/*.log` with timestamps.
-
-### Environment Variables (per stack `.env`)
-
-```
-STACK_NAME=lemp-foo
-STACK_DOMAIN=foo.example.com
-PMA_DOMAIN=pma.foo.example.com
-DB_ENGINE=mysql
-DB_NAME=foo_db
-DB_USER=foo_user
-DB_PASS=********
-TZ=America/Phoenix
-
-# Networking
-STACK_NETWORK=net_${STACK_NAME}
-
-# SSL
-USE_LETSENCRYPT=true
-LOCAL_TEST_SUFFIX=.test
-```
-
----
-
-## Automation Workflows
-
-### 1) Create a LEMP Stack
-- `scripts/create-lemp-1.sh` → scaffolds `stacks/<stack-name>/`, writes `.env`, sets `STACK_NETWORK`.
-- `scripts/create-lemp-2-stack-name-and-domain.sh` → validates domains (root + phpMyAdmin).
-- `scripts/create-lemp-3-environment-lemp.sh` → renders `docker-compose.yml` from templates; substitutes service names from `STACK_NAME`.
-- `scripts/create-lemp-4-add-domain-host.sh` → optionally updates local hosts (for `.test`).
-- `scripts/create-lemp-5-traefik-config.sh` → writes/updates Traefik **dynamic** files for stack routes.
-
-**Result:** isolated Docker network, Nginx, DB, phpMyAdmin online; Traefik routes live.
-
-### 2) Create a WordPress Container (per chosen stack)
-- `scripts/create-wp-1.sh`:
-  - Presents a **numeric menu** of available stacks (from `stacks/`).
-  - Prompts for WP site domain and slug.
-  - Generates `wp-sites/<site>/docker-compose.yml`, labels/config for Traefik.
-  - Connects WP container to **parent stack DB** (uses stack `.env`).
-  - Optionally creates a **phpMyAdmin subdomain** for the site.
-  - Updates stack + global **Traefik dynamic** config.
-
-### 3) Traefik Configuration (auto-generated)
-- `functions/traefik.sh` scans:
-  - `stacks/*/traefik/dynamic/*.yml` and
-  - `stacks/*/wp-sites/*/` for site route definitions.
-- `scripts/update-traefik.sh` merges writes (no manual edits) and triggers a Traefik reload.
-
-### 4) SSL Certificates
-- **Production**: Let’s Encrypt handled by Traefik.
-- **Local `.test`**: `functions/ssl.sh` generates self-signed certs with `openssl` and places them in `stacks/<stack>/certs/` (or a centralized `traefik/certs/` if preferred).
-- `scripts/check-certs.sh` scans expiry and reports upcoming renewals.
-
-### 5) Backups & Recovery
-- `scripts/backup-db.sh` (runs on schedule inside the DB container or via host cron):
-  - Dumps each site’s DB to `stacks/<stack>/backups/<site>/DATE.sql.gz`
-  - **Retention**: daily for 30 days, monthly snapshots kept indefinitely.
-- `scripts/recover-db.sh`:
-  - Validates the target DB exists in MySQL.
-  - Recovers from `.sql` dumps; supports table-level restore when provided.
-  - Includes **tablespace** safeguards for `.frm/.ibd`-based recovery scenarios.
-
-### 6) Listing & Removal
-- `scripts/list-stacks.sh`:
-  - Enumerates stacks, their networks, domains, and WP sites.
-- `scripts/remove-lemp.sh`:
-  - Presents a confirmation menu.
-  - Stops/removes containers, network, and cleans Traefik entries.
-  - Preserves backups by default; offers optional purge.
-
-### 7) Health Checks & Alerts
-- Optional: scripts can emit **non-zero exit codes** for external monitors.
-- Hooks exist for sending notifications (email/webhook) on failures.
-
----
-
-## Automation Flow Diagram
-
-```mermaid
-flowchart LR
-    A[User runs scripts] --> B[functions/_functions.sh loads helpers]
-    B --> C{Create LEMP?}
-    C -->|Yes| D[create-lemp-*.sh]
-    C -->|No| E{Create WP site?}
-    E -->|Yes| F[create-wp-1.sh]
-    E -->|No| G{Maintain?}
-    G -->|Update Routes| H[update-traefik.sh]
-    G -->|Backup| I[backup-db.sh]
-    G -->|Recover| J[recover-db.sh]
-    G -->|Remove| K[remove-lemp.sh]
-    D --> L[Generate compose + env + traefik]
-    F --> L
-    L --> M[Docker Compose up]
-    M --> N[Traefik reload]
-```
-
----
-
-## Start the script in a terminal
-
-```sh
-sh start.sh
-
-```
-
----
-
-## Notes
-- Each LEMP stack runs in **its own Docker network** named after the stack to avoid cross-talk.
-- Traefik is the **entry point** for all HTTP/HTTPS traffic; dynamic files are **generated** (don’t hand-edit generated files).
-- Local `.test` domains use **local certificates**; production uses **Let’s Encrypt**.
-- Backups are stored per site in a predictable hierarchy with daily/monthly retention.
-- Scripts are **POSIX-compliant** to maximize portability.
-- This readme might be a bit confusing and a work in progress.
----
