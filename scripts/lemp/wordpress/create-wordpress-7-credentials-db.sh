@@ -37,8 +37,7 @@ else
 	WORDPRESS_DB_NAME="$USER_INPUT_DB_NAME"
 fi
 
-line_break
-input_cursor "${C_Underline}WORDPRESS_DB_NAME${C_Reset}: '${C_Yellow}$WORDPRESS_DB_NAME${C_Reset}'"
+input_cursor "WORDPRESS_DB_NAME${C_Reset}: '${C_Magenta}$WORDPRESS_DB_NAME${C_Reset}'"
 line_break
 #####################################################
 # WORDPRESS: DATABASE TABLE PREFIX
@@ -47,7 +46,7 @@ DEFAULT_WORDPRESS_TABLE_PREFIX="wp_"
 
 heading "WORDPRESS: DATABASE TABLE PREFIX"
 option_question "Enter WordPress database table prefix name. Leave blank to use: \"${C_Underline}${DEFAULT_WORDPRESS_TABLE_PREFIX}${C_Reset}${C_Yellow}\":"
-line_break
+
 printf "%s " "$(input_cursor)"
 read USER_INPUT_WORDPRESS_TABLE_PREFIX
 
@@ -60,7 +59,7 @@ else
 	WORDPRESS_TABLE_PREFIX="$USER_INPUT_WORDPRESS_TABLE_PREFIX"
 fi
 line_break
-input_cursor "${C_Underline}WORDPRESS_DB_NAME${C_Reset}: '${C_Yellow}$WORDPRESS_TABLE_PREFIX${C_Reset}'"
+input_cursor "WORDPRESS_DB_NAME${C_Reset}: '${C_Magenta}${WORDPRESS_TABLE_PREFIX}${C_Reset}'"
 line_break
 #####################################################
 # WORDPRESS: DATABASE USER NAME
@@ -97,7 +96,7 @@ if [ "$USER_LENGTH" -gt "$MAX_LENGTH_WORDPRESS_DB_USER" ]; then
 fi
 
 line_break
-status_msg "${C_Underline}WORDPRESS_DB_USER_PASSWORD${C_Reset}: Will be saved to '${C_Yellow}${WORDPRESS_DIR}/secrets/wp_db_user.txt${C_Reset}'"
+input_cursor "WORDPRESS_DB_USER_PASSWORD${C_Reset}: Will be saved to '${C_Magenta}${WORDPRESS_DIR}/secrets/wp_db_user.txt${C_Reset}'"
 line_break
 WORDPRESS_DB_USER="${WORDPRESS_DB_USER}"
 
@@ -137,7 +136,7 @@ if [ "$PASS_LENGTH" -gt "$MAX_LENGTH_WORDPRESS_DB_USER_PASSWORD" ]; then
 fi
 
 line_break
-status_msg "${C_Underline}WORDPRESS_DB_USER_PASSWORD${C_Reset}: Will be saved to '${C_Yellow}${WORDPRESS_DIR}/secrets/wp_db_user_password.txt${C_Reset}'"
+input_cursor "WORDPRESS_DB_USER_PASSWORD${C_Reset}: Will be saved to '${C_Magenta}${WORDPRESS_DIR}/secrets/wp_db_user_password.txt${C_Reset}'"
 
 WORDPRESS_DB_USER_PASSWORD="${WORDPRESS_DB_USER_PASSWORD}"
 

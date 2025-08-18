@@ -12,56 +12,38 @@ project_info() {
 export -f project_info
 
 lemp_info() {
-	section_title "LEMP DOCKER"
-	example_msg "LEMP_DIR = ${C_Yellow}$LEMP_DIR${C_Reset}"
-	example_msg "LEMP_PATH = ${C_Yellow}$LEMP_PATH${C_Reset}"
-	example_msg "LEMP_CONTAINER_NAME = ${C_Yellow}$LEMP_CONTAINER_NAME${C_Reset}"
-	example_msg "LEMP_NETWORK_NAME = ${C_Yellow}$LEMP_NETWORK_NAME${C_Reset}"
-	section_title "LEMP DOCKER SERVICES"
-	example_msg "DB_IMAGE = ${C_Yellow}${DB_IMAGE}${C_Reset}"
-	example_msg "PHP_IMAGE = ${C_Yellow}${PHP_IMAGE}${C_Reset}"
-	example_msg "PHPMYADMIN_IMAGE = ${C_Yellow}${PHPMYADMIN_IMAGE}${C_Reset}"
-	section_title "LEMP DEVELOPMENT DOMAIN"
-	example_msg "LEMP_DOMAIN_NAME = ${C_Yellow}${LEMP_DOMAIN_NAME}${C_Reset}"
-	example_msg "LEMP_DOMAIN_NAME_TLD = ${C_Yellow}${LEMP_DOMAIN_NAME_TLD}${C_Reset}"
-	example_msg "LEMP_DOMAIN = ${C_Yellow}https://${LEMP_DOMAIN}${C_Reset}"
-	example_msg "PHPMYADMIN_IMAGE = ${C_Yellow}https://phpmyadmin.${LEMP_DOMAIN}${C_Reset}"
+	line_break
+	section_title "LEMP DOCKER" ${C_Green}
+	example_msg "${C_Green}LEMP_DIR = ${C_Reset}$LEMP_DIR"
+	example_msg "${C_Green}LEMP_PATH = ${C_Reset}$LEMP_PATH"
+	example_msg "${C_Green}LEMP_CONTAINER_NAME = ${C_Reset}$LEMP_CONTAINER_NAME"
+	example_msg "${C_Green}LEMP_NETWORK_NAME = ${C_Reset}$LEMP_NETWORK_NAME"
+	line_break
+	section_title "LEMP DOCKER SERVICES" ${C_Green}
+	example_msg "${C_Green}DB_IMAGE = ${C_Reset}${DB_IMAGE}"
+	example_msg "${C_Green}PHP_IMAGE = ${C_Reset}${PHP_IMAGE}"
+	example_msg "${C_Green}PHPMYADMIN_IMAGE = ${C_Reset}${PHPMYADMIN_IMAGE}"
+	line_break
+	section_title "LEMP DOMAIN" ${C_Green}
+	example_msg "${C_Green}LEMP_DOMAIN_NAME = ${C_Reset}${LEMP_DOMAIN_NAME}"
+	example_msg "${C_Green}LEMP_DOMAIN_NAME_TLD = ${C_Reset}${LEMP_DOMAIN_NAME_TLD}"
+	example_msg "${C_Green}LEMP_DOMAIN = ${C_Underline}https://${LEMP_DOMAIN}"
+	example_msg "${C_Green}PHPMYADMIN = ${C_Underline}https://phpmyadmin.${LEMP_DOMAIN}"
 }
 export -f lemp_info
 
 wordpress_info() {
-	section_title "WORDPRESS DOCKER" ${C_Green}
-	example_msg "${C_Green}CONTAINER DIR  ${C_Reset}${WORDPRESS_DIR}"
-	example_msg "${C_Green}WORDPRESS_PATH  ${C_Reset}$WORDPRESS_PATH${C_Reset}"
-	example_msg "${C_Green}WORDPRESS_SERVICE_CONTAINER_NAME  ${C_Reset}${WORDPRESS_SERVICE_CONTAINER_NAME}${C_Reset}"
-	example_msg "${C_Green}WORDPRESS_IMAGE  ${C_Reset}${WORDPRESS_IMAGE}${C_Reset}"
-	line_break
-	section_title "WORDPRESS SUBDOMAIN" ${C_Green}
-	example_msg "${C_Green}WORDPRESS_SUBDOMAIN  ${C_Reset}${WORDPRESS_SUBDOMAIN}${C_Reset}"
-	line_break
+
 	section_title "WORDPRESS DATABASE" ${C_Green}
-	example_msg "${C_Green}WORDPRESS DB HOST  ${C_Reset}${DB_HOST_NAME}${C_Reset}"
-	example_msg "${C_Green}WORDPRESS_DB_NAME  ${C_Reset}${WORDPRESS_DB_NAME}${C_Reset}"
-	example_msg "${C_Green}WORDPRESS_TABLE_PREFIX = ${C_Reset}${WORDPRESS_TABLE_PREFIX}${C_Reset}"
-	line_break
-	section_title "PHPMYADMIN" ${C_Green}
-	example_msg "${C_Green}PHPMYADMIN_URL  ${C_Reset}https://phpmyadmin.${LEMP_DOMAIN}"
-	example_msg "${C_Green}WORDPRESS_DB_USER  ${C_Reset}${WORDPRESS_DB_USER}${C_Reset}"
-	example_msg "${C_Green}WORDPRESS_DB_USER_PASSWORD  ${C_Reset}${WORDPRESS_DB_USER_PASSWORD}${C_Reset}"
+	example_msg "${C_Green}PHPMYADMIN_URL  ${C_Underline}https://phpmyadmin.${LEMP_DOMAIN}"
+	example_msg "${C_Green}WORDPRESS_DB_USER  ${C_Reset}${WORDPRESS_DB_USER}"
+	example_msg "${C_Green}WORDPRESS_DB_USER_PASSWORD  ${C_Reset}${WORDPRESS_DB_USER_PASSWORD}"
 	line_break
 	section_title "WORDPRESS WP-ADMIN" ${C_Green}
-	example_msg "${C_Green}WORDPRESS SITE URL  ${C_Reset}https://${WORDPRESS_SUBDOMAIN}"
-	example_msg "${C_Green}WORDPRESS ADMIN URL  ${C_Reset}https://${WORDPRESS_SUBDOMAIN}/wp-admin"
-	example_msg "${C_Green}WORDPRESS_ADMIN_USER  ${C_Reset}${WORDPRESS_ADMIN_USER}${C_Reset}"
-	example_msg "${C_Green}WORDPRESS_ADMIN_USER_PASSWORD  ${C_Reset}${WORDPRESS_ADMIN_USER_PASSWORD}${C_Reset}"
-	example_msg
-
-
-	example_msg
-	example_msg "${C_Green}WORDPRESS DB USER FILE  ${C_Reset}${WORDPRESS_CONTAINER_PATH}/secrets/wp_db_user.txt"
-	example_msg "${C_Green}WORDPRESS DB PASSWORD FILE  ${C_Reset}${WORDPRESS_CONTAINER_PATH}/secrets/wp_db_user_password.txt"
-	example_msg "${C_Green}WORDPRESS ADMIN USER FILE  ${C_Reset}${WORDPRESS_CONTAINER_PATH}/secrets/wp_admin_user.txt"
-	example_msg "${C_Green}WORDPRESS ADMIN USER PASSWORD FILE  ${C_Reset}${WORDPRESS_CONTAINER_PATH}/secrets/wp_admin_user_password.txt"
+	example_msg "${C_Green}WORDPRESS SITE URL  ${C_Underline}https://${WORDPRESS_SUBDOMAIN}"
+	example_msg "${C_Green}WORDPRESS ADMIN URL  ${C_Underline}https://${WORDPRESS_SUBDOMAIN}/wp-admin"
+	example_msg "${C_Green}WORDPRESS_ADMIN_USER  ${C_Reset}${WORDPRESS_ADMIN_USER}"
+	example_msg "${C_Green}WORDPRESS_ADMIN_USER_PASSWORD  ${C_Reset}${WORDPRESS_ADMIN_USER_PASSWORD}"
 
 }
 export -f wordpress_info

@@ -26,7 +26,7 @@ heading "WORDPRESS: ADMIN USER EMAIL"
 
 # Set default wp-admin admin user email
 DEFAULT_WORDPRESS_ADMIN_USER_EMAIL="${ADMIN_EMAIL}"
-example_msg "Leave blank to use \"${C_Yellow}${DEFAULT_WORDPRESS_ADMIN_USER_EMAIL}${C_Reset}\" (This email is pulled from \$ADMIN_EMAIL in your /env.sh file):"
+example_msg "${C_Yellow}${C_Underline}NOTE${C_Reset}: Leave blank to use \"${C_Yellow}${DEFAULT_WORDPRESS_ADMIN_USER_EMAIL}${C_Reset}\" (This email is pulled from \$ADMIN_EMAIL in your /env.sh file):"
 line_break
 
 option_question "Enter your working email for the wp-admin admin user:"
@@ -48,15 +48,14 @@ fi
 line_break
 heading "WORDPRESS: ADMIN USER NAME"
 example_msg "${C_Yellow}${C_Underline}NOTE${C_Reset}: A common method of brute force hacking is to use a \"dictionary\" of common username and password combinations. For this reason, it is often recommended to avoid common usernames such as \"admin\"."
-
-option_question "Enter a WordPress admin username, or leave blank to auto-generate a secure username:"
 line_break
+option_question "Enter a WordPress admin username, or leave blank to auto-generate a secure username:"
 printf "%s " "$(input_cursor)"
 read USER_INPUT_WORDPRESS_ADMIN_USER
 
 if [ -z "$USER_INPUT_WORDPRESS_ADMIN_USER" ]; then
 
-	input_cursor ">>> No wp-admin admin username provided. Generating a secure wp-admin username (72 alphanumeric characters)"
+	input_cursor "No wp-admin admin username provided. Generating a secure wp-admin username (72 alphanumeric characters)"
 
 	# Set default wp-admin admin username
 	DEFAULT_WORDPRESS_ADMIN_USER="$(openssl rand -hex 36 | cut -c1-72)"
@@ -77,13 +76,12 @@ fi
 line_break
 heading "WORDPRESS: ADMIN USER PASSWORD"
 option_question "Enter a WordPress wp-admin password, or leave blank to auto-generate a secure password:"
-line_break
 printf "%s " "$(input_cursor)"
 read USER_INPUT_WORDPRESS_ADMIN_PASSWORD
 
 if [ -z "$USER_INPUT_WORDPRESS_ADMIN_PASSWORD" ]; then
 
-	input_cursor ">>> No wp-admin admin user password provided. ${C_Reset}Generating a secure wp-admin password (72 random base64 characters)"
+	input_cursor "No wp-admin admin user password provided. ${C_Reset}Generating a secure wp-admin password (72 random base64 characters)"
 
 	# Set default wp-admin admin user password
 	DEFAULT_WORDPRESS_ADMIN_USER_PASSWORD="$(openssl rand -base64 36 | cut -c1-72)"

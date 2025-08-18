@@ -29,6 +29,9 @@ export C_BrightWhite=$(tput setaf 15)
 
 export C_Status="${C_BrightBlue}"
 
+
+
+
 #####################################################
 # SOURCE MESSAGE FUNCTIONS
 . "${PROJECT_PATH}/functions/_messages.sh"
@@ -180,8 +183,6 @@ else
 	HOSTS_FILE_LOOPBACK_IP="$(get_local_loopback_ip)"; [ -n "$HOSTS_FILE_LOOPBACK_IP" ] || HOSTS_FILE_LOOPBACK_IP=127.0.0.1
 	export HOSTS_FILE_LOOPBACK_IP
 
-	body_msg "${HOSTS_FILE_LOOPBACK_IP}"
-
 	# USERNAME
 	if [ -n "$USER" ]; then
 	    mlusername=$USER
@@ -191,6 +192,11 @@ else
 	    mlusername=$(id -un 2>/dev/null || whoami 2>/dev/null)
 	fi
 
+	#####################################################
+
+	heading "DOCKER MULTISTACK LEMP"
+	body_msg "by Christopher Sample github.com/studiolxv"
+	line_break
     heading "NEW INSTALL SETUP WIZARD"
 	body_msg "Answer the following questions to begin a new installation of Multistack LEMP."
 	#####################################################
@@ -198,8 +204,10 @@ else
 
 	# Prompt user to specify the preferred admin email
 	line_break
-	section_title "LEMP ADMIN EMAIL"
-	option_question "Type in your admin email"
+	section_title "DEFAULT ADMIN EMAIL" ${C_Magenta}
+	example_msg "This will be used for a default email and fallbacks for email prompts" ${C_Magenta}
+	line_break
+	option_question "Type in your admin or preferred default email:"
 	read -p "$(input_cursor)" USER_INPUT_ADMIN_EMAIL
 
 	# If $USER_INPUT_ADMIN_EMAIL is empty

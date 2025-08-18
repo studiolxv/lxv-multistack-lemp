@@ -124,86 +124,47 @@ All automation is implemented in **portable POSIX shell** (no Bash-only features
 ### Directory Layout (example)
 
 ```
-
-.
-├── _environment				# Sets up variables for .env
+docker-multistack-lemp
+├── _environment.sh
 ├── functions
 ├── scripts
 ├── stacks
-│   └── <domain_one>			# Stack container example
-│       ├── backup.log
-│       ├── containers			# Where Wordpress containers live
-│       ├── crontab
-│       ├── docker-compose.yml
-│       ├── html
-│       │   └── index.php		#
-│       ├── log
-│       ├── mysql-<DB_IMAGE>
-│       │   ├── backups			# Automated backups
-│       │   ├── data
-│       ├── nginx
-│       ├── php
-│       ├── phpmyadmin
-│       ├── scripts
-│       │   ├── lemp-backup.sh
-│       │   ├── lemp-cleanup-backups.sh
-│       │   ├── lemp-env.sh
-│       │   ├── lemp-ghost-backup-restore.sh
-│       │   ├── lemp-init.sh
-│       │   ├── lemp-optimize-wp.sh
-│       │   └── mysql-healthcheck.sh
-│       └── secrets
-│           ├── db_root_user_password.txt		# Dynamically created
-│           └── db_root_user.txt
-├── start.sh                                     # Run this to start
+│   ├── lemp_domain_one
+│   │   └── containers
+│   │       ├── suddomain-one
+│	│	 	│	├── docker-compose.yml
+│	│	 	│	├── Dockerfile
+│   │       │   └─── html
+│   │       └── subdomain-two
+│	│	 		├── docker-compose.yml
+│	│	 		├── Dockerfile
+│   │           └── html
+│   └── lemp_domain_two
+│    	   	└─── containers
+│       	    ├── subdomain-three
+│			 	│	├── docker-compose.yml
+│			 	│	├── Dockerfile
+│      		    │   └─── html
+│       	    └── subdomain-four
+│			 		├── docker-compose.yml
+│			 		├── Dockerfile
+│       	        └── html
+├── start.sh
 ├── templates
 └── traefik
     ├── certs
-    │   ├── <domain_one>.test.crt
-    │   └── <domain_one>.test.key
+    │   ├── domain-one.test.crt
+    │   ├── domain-one.test.key
+    │   ├── domain-two.test.crt
+    │   └── domain-two.test.key
     ├── docker-compose.override.yml
     ├── docker-compose.yml
     ├── dynamic
     │   ├── certs.yml
-    │   ├── lemp-<domain_one>.yml
+    │   ├── lemp-domain-one.yml
+    │   └── lemp-domain-two.yml
     └── traefik.yml
-.
-├─ scripts/
-│  ├─ create-lemp-1.sh
-│  ├─ create-lemp-2-stack-name-and-domain.sh
-│  ├─ create-lemp-3-environment-lemp.sh
-│  ├─ create-lemp-4-add-domain-host.sh
-│  ├─ create-lemp-5-traefik-config.sh
-│  ├─ create-wp-1.sh
-│  ├─ list-stacks.sh
-│  ├─ remove-lemp.sh
-│  ├─ update-traefik.sh
-│  ├─ backup-db.sh
-│  ├─ check-certs.sh
-│  └─ recover-db.sh
-├─ functions/
-│  ├─ _functions.sh            # loads helpers; sources all files in ./functions
-│  ├─ env.sh                   # env loading/validation helpers
-│  ├─ menu.sh                  # POSIX numeric menus for selections
-│  ├─ docker.sh                # compose up/down/wait helpers
-│  ├─ traefik.sh               # dynamic config writers
-│  ├─ ssl.sh                   # local cert generation (for .test)
-│  ├─ db.sh                    # dump/restore/recover helpers
-│  └─ log.sh                   # logging + timestamps
-├─ stacks/
-│  └─ <stack-name>/
-│     ├─ .env
-│     ├─ docker-compose.yml
-│     ├─ traefik/
-│     │  └─ dynamic/           # generated per stack + sites
-│     ├─ certs/                # local .crt/.key for .test (optional if centralized)
-│     ├─ backups/              # DB dumps (daily/monthly)
-│     └─ wp-sites/
-│        └─ <site-name>/
-│           └─ docker-compose.yml
-└─ traefik/
-   ├─ static/traefik.yml
-   └─ dynamic/                 # global dynamic configs aggregated from stacks
+
 ```
 
 ### Conventions
@@ -312,29 +273,11 @@ flowchart LR
 
 ---
 
-## Usage (typical)
+## Start the script in a terminal
 
 ```sh
-# Create a new LEMP stack (guided prompts)
-sh scripts/create-lemp-1.sh
+sh start.sh
 
-# Add a WordPress site to an existing stack
-sh scripts/create-wp-1.sh
-
-# Rebuild Traefik dynamic config and reload
-sh scripts/update-traefik.sh
-
-# List stacks and their domains
-sh scripts/list-stacks.sh
-
-# Run backups now (also run via cron)
-sh scripts/backup-db.sh
-
-# Recover a database from a dump
-sh scripts/recover-db.sh
-
-# Remove a stack safely (with confirmations)
-sh scripts/remove-lemp.sh
 ```
 
 ---

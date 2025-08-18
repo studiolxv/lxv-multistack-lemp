@@ -33,8 +33,10 @@ fi
 
 line_break
 heading "SUCCESS"
-success_msg "🎉 ${C_Green}Wordpress Container \"${WORDPRESS_SUBDOMAIN}\" successfully set up."
+success_msg "🎉 Wordpress Container \"${C_Magenta}${WORDPRESS_SUBDOMAIN}${C_Reset}\" successfully set up."
+line_break
 
+# Output success message
 wordpress_info
 
 # Open the default browser to the WordPress site and phpMyAdmin
@@ -42,4 +44,4 @@ open_link "https://$WORDPRESS_SUBDOMAIN"
 
 line_break
 
-# Output success message
+
