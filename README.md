@@ -1,6 +1,6 @@
 # Multi-Stack LEMP Setup for Wordpress (Docker-Based + Shell Automation)
 
-This project automates the creation of multiple independent **LEMP stacks** in **Docker**, as well as automating the creation of Wordpress container within a LEMP stack's virtual host domain.
+This project automates the creation of multiple independent **LEMP stacks** in **Docker**, as well as automating the creation of Wordpress containers. Each LEMP Stack creates its own Virtual host local development domain any Wordpress container created underneath will be added as a subdomain within a LEMP stack's virtual host domain and SSL Certificate.
 
 ---
 
@@ -120,6 +120,17 @@ graph TD
 
 All automation is implemented in **portable POSIX shell** (no Bash-only features) and organized into reusable functions.
 
+### Virtual Hosts (example)
+```
+https://domain-one.test (SSL)
+└─ https://suddomain-one.domain-one.test
+└─ https://suddomain-two.domain-one.test
+
+https://domain-two.test (SSL)
+└─ https://suddomain-three.domain-two.test
+└─ https://suddomain-four.domain-two.test
+```
+
 ### Directory Layout (example)
 
 ```
@@ -128,23 +139,23 @@ docker-multistack-lemp
 ├── functions
 ├── scripts
 ├── stacks
-│   ├── lemp_domain_one
+│   ├── domain-one (Docker Container)
 │   │   └── containers
-│   │       ├── suddomain-one
+│   │       ├── suddomain-one (Docker Container)
 │	│	 	│	├── docker-compose.yml
 │	│	 	│	├── Dockerfile
 │   │       │   └─── html
-│   │       └── subdomain-two
+│   │       └── subdomain-two (Docker Container)
 │	│	 		├── docker-compose.yml
 │	│	 		├── Dockerfile
 │   │           └── html
-│   └── lemp_domain_two
+│   └── domain-two (Docker Container)
 │    	   	└─── containers
-│       	    ├── subdomain-three
+│       	    ├── subdomain-three (Docker Container)
 │			 	│	├── docker-compose.yml
 │			 	│	├── Dockerfile
 │      		    │   └─── html
-│       	    └── subdomain-four
+│       	    └── subdomain-four (Docker Container)
 │			 		├── docker-compose.yml
 │			 		├── Dockerfile
 │       	        └── html
