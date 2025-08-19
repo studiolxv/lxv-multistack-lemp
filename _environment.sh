@@ -29,9 +29,6 @@ export C_BrightWhite=$(tput setaf 15)
 
 export C_Status="${C_BrightBlue}"
 
-
-
-
 #####################################################
 # SOURCE MESSAGE FUNCTIONS
 . "${PROJECT_PATH}/functions/_messages.sh"
@@ -40,49 +37,49 @@ export C_Status="${C_BrightBlue}"
 # DEBUG MODE MESSAGES
 
 if [ -n "$debug_multistack" ] && [ "$debug_multistack" = "true" ]; then
-if [ "$(basename "$0")" = "start.sh" ]; then
-    debug_msg "🔍 Debug mode is enabled!"
-fi
-	debug_msg "📦 _environment.sh sourced from file: $(basename "$0")"
+    if [ "$(basename "$0")" = "start.sh" ] || [ "$(basename "$0")" = "manage.sh" ]; then
+        debug_msg "🔍 Debug mode is enabled!"
+    fi
+    debug_msg "📦 _environment.sh sourced from file: $(basename "$0")"
 fi
 
 # Avoid infinite loops when sourcing multiple times
 if [ -n "$FUNCTIONS_PATH" ]; then
-	return
+    return
 fi
 
 #####################################################
 # LOAD FUNCTIONS
 load_functions() {
-	# Ensure FUNCTION_PATH is valid
-	if [ ! -d "$FUNCTIONS_PATH" ]; then
-		echo "❌ Error: FUNCTIONS_PATH is not set cannot source functions!" >&2
-		exit 1
-	else
-		if [ -n "$debug_multistack" ] && [ "$debug_multistack" = "true" ]; then
-			debug_msg "✅ FUNCTIONS_PATH is set and functions can be sourced from:"
-			debug_msg "↳$FUNCTIONS_PATH"
-		fi
-
-	fi
-
-	# Ensure functions directory exists
-	if [ -d "$FUNCTIONS_PATH" ]; then
-		# Source each function file in the current shell
-		for file in $(find "$FUNCTIONS_PATH" -type f -name "*.sh"); do
-			if [ -f "$file" ]; then
-				if [ -n "$debug_file_sourcing" ] && [ "$debug_file_sourcing" = "true" ]; then
-					debug_msg "📦 sourcing function file: $file"
-				fi
-
-				source "$file"
-				# wait ensures any background processes (if applicable) complete first
-				wait
-			fi
-		done
-	else
-		echo "❌ Error: Directory '$FUNCTIONS_PATH' does not exist." >&2
-	fi
+    # Ensure FUNCTION_PATH is valid
+    if [ ! -d "$FUNCTIONS_PATH" ]; then
+        echo "❌ Error: FUNCTIONS_PATH is not set cannot source functions!" >&2
+        exit 1
+    else
+        if [ -n "$debug_multistack" ] && [ "$debug_multistack" = "true" ]; then
+            debug_msg "✅ FUNCTIONS_PATH is set and functions can be sourced from:"
+            debug_msg "↳$FUNCTIONS_PATH"
+        fi
+        
+    fi
+    
+    # Ensure functions directory exists
+    if [ -d "$FUNCTIONS_PATH" ]; then
+        # Source each function file in the current shell
+        for file in $(find "$FUNCTIONS_PATH" -type f -name "*.sh"); do
+            if [ -f "$file" ]; then
+                if [ -n "$debug_file_sourcing" ] && [ "$debug_file_sourcing" = "true" ]; then
+                    debug_msg "📦 sourcing function file: $file"
+                fi
+                
+                source "$file"
+                # wait ensures any background processes (if applicable) complete first
+                wait
+            fi
+        done
+    else
+        echo "❌ Error: Directory '$FUNCTIONS_PATH' does not exist." >&2
+    fi
 }
 export -f load_functions
 
@@ -90,141 +87,141 @@ export -f load_functions
 # ENVIRONMENT VARIABLES
 # Load project path from .env
 if [ -f "./.env" ]; then
-
-	if [ "$(basename "$0")" = "start.sh" ]; then
-	    heading ".ENV FILE"
-		success_msg ".env file found"
-		line_break
-	fi
-	if [ -n "$debug_multistack" ] && [ "$debug_multistack" = "true" ]; then
-		body_msg "📂   Sourcing .env file..."
-		line_break
-	fi
-
-	# Source the .env file
-	. ./.env
-
-	#####################################################
-	# LOAD FUNCTIONS
-	load_functions
-
+    
+    if [ "$(basename "$0")" = "start.sh" ]; then
+        heading ".ENV FILE"
+        success_msg ".env file found"
+        line_break
+    fi
+    if [ -n "$debug_multistack" ] && [ "$debug_multistack" = "true" ]; then
+        body_msg "📂   Sourcing .env file..."
+        line_break
+    fi
+    
+    # Source the .env file
+    . ./.env
+    
+    #####################################################
+    # LOAD FUNCTIONS
+    load_functions
+    
 else
-	# PROJECT (Main Directory for entire project)
-	# Ensure PROJECT_PATH is set to where THIS FILE is, not the calling script
-	# Determine script path correctly, whether executed or sourced
-	if [ -n "$debug_multistack" ] && [ "$debug_multistack" = "true" ]; then
-		debug_msg "📂  .env file not found. Creating one..."
-	fi
-
-	# OPERATING SYSTEM
-	# Detect OS type
-	export OS_TYPE="$(uname)"
-	export OS_TZ="$(cat /etc/timezone 2>/dev/null || ls -l /etc/localtime | awk -F'/zoneinfo/' '{print $2}')"
-
-	#####################################################
-	# PATHS
-
-	if [ -n "$debug_multistack" ] && [ "$debug_multistack" = "true" ]; then
-		debug_msg "📦 PROJECT_PATH: ${PROJECT_PATH}"
-	fi
-
-	# Docker Image Platform (linux/amd64, linux/arm64, etc.) Change to your platform
-	export OS_DOCKER_IMAGE_PLATFORM="linux/amd64"
-
-	# Get the current directory name
-	export PROJECT_NAME="$(basename "$PROJECT_PATH")"
-
-	# STACKS (Multiple LEMP Stack Servers)
-	export STACKS_PATH="${PROJECT_PATH}/stacks"
-
-	# SCRIPTS (BASH scripts needed for this project to work)
-	export SCRIPTS_PATH="${PROJECT_PATH}/scripts"
-
-	# FUNCTIONS (Reusable functions for this project)
-	export FUNCTIONS_PATH="${PROJECT_PATH}/functions"
-
-	# TRAEFIK (Centralized Traefik Reverse Proxy for all LEMP stacks)
-	export TRAEFIK_DIR="traefik"
-	export TRAEFIK_PATH="${PROJECT_PATH}/${TRAEFIK_DIR}"
-	export TRAEFIK_DOCKER_YML_FILE="${TRAEFIK_PATH}/docker-compose.yml"
-	# DYNA CONFIGS
-	export TRAEFIK_DYNAMIC_DIR="dynamic"
-	export TRAEFIK_DYNAMIC_PATH="${TRAEFIK_PATH}/${TRAEFIK_DYNAMIC_DIR}"
-	# CERTS/ CERTIFICATES
-	export TRAEFIK_CERTS_DIR="certs"
-	export TRAEFIK_CERTS_PATH="${TRAEFIK_PATH}/${TRAEFIK_CERTS_DIR}"
-	export TRAEFIK_CERTS_YML_FILE_NAME="certs.yml"
-	export TRAEFIK_CERTS_YML_FILE="${TRAEFIK_DYNAMIC_PATH}/${TRAEFIK_CERTS_YML_FILE_NAME}"
-	# LOG FILE
-	export LOG_FILE="${PROJECT_PATH}/debug.log"
-
-	#####################################################
-	# LOAD FUNCTIONS
-	load_functions
-	wait
-
-	#####################################################
-	# DEFAULT LEMP STACK IMAGES FOR NEW STACKS
-	export DEFAULT_DB_IMAGE="mysql:latest"
-	export DEFAULT_PHP_IMAGE="php:8.5-rc-fpm-bullseye" # Needs to be FPM version
-	export DEFAULT_PMA_IMAGE="phpmyadmin:latest"
-	export DEFAULT_WP_IMAGE="wordpress:latest" #"wordpress:latest"
-
-	#####################################################
-	# VARIABLES REQUIRING FUNCTIONS
-
-	# Detect OS type
-	export OS_NAME="$(detect_os_name)"
-
-	# VARIABLES REQUIRING FUNCTIONS
-	export HOSTS_FILE=$(detect_os_hosts_file)
-
-	# HOSTS FILE LOCAL LOOPBACK
-	HOSTS_FILE_LOOPBACK_IP="$(get_local_loopback_ip)"; [ -n "$HOSTS_FILE_LOOPBACK_IP" ] || HOSTS_FILE_LOOPBACK_IP=127.0.0.1
-	export HOSTS_FILE_LOOPBACK_IP
-
-	# USERNAME
-	if [ -n "$USER" ]; then
-	    mlusername=$USER
-	elif [ -n "$LOGNAME" ]; then
-	    mlusername=$LOGNAME
-	else
-	    mlusername=$(id -un 2>/dev/null || whoami 2>/dev/null)
-	fi
-
-	#####################################################
-
-	heading "DOCKER MULTISTACK LEMP"
-	body_msg "by Christopher Sample github.com/studiolxv"
-	line_break
+    # PROJECT (Main Directory for entire project)
+    # Ensure PROJECT_PATH is set to where THIS FILE is, not the calling script
+    # Determine script path correctly, whether executed or sourced
+    if [ -n "$debug_multistack" ] && [ "$debug_multistack" = "true" ]; then
+        debug_msg "📂  .env file not found. Creating one..."
+    fi
+    
+    # OPERATING SYSTEM
+    # Detect OS type
+    export OS_TYPE="$(uname)"
+    export OS_TZ="$(cat /etc/timezone 2>/dev/null || ls -l /etc/localtime | awk -F'/zoneinfo/' '{print $2}')"
+    
+    #####################################################
+    # PATHS
+    
+    if [ -n "$debug_multistack" ] && [ "$debug_multistack" = "true" ]; then
+        debug_msg "📦 PROJECT_PATH: ${PROJECT_PATH}"
+    fi
+    
+    # Docker Image Platform (linux/amd64, linux/arm64, etc.) Change to your platform
+    export OS_DOCKER_IMAGE_PLATFORM="linux/amd64"
+    
+    # Get the current directory name
+    export PROJECT_NAME="$(basename "$PROJECT_PATH")"
+    
+    # STACKS (Multiple LEMP Stack Servers)
+    export STACKS_PATH="${PROJECT_PATH}/stacks"
+    
+    # SCRIPTS (BASH scripts needed for this project to work)
+    export SCRIPTS_PATH="${PROJECT_PATH}/scripts"
+    
+    # FUNCTIONS (Reusable functions for this project)
+    export FUNCTIONS_PATH="${PROJECT_PATH}/functions"
+    
+    # TRAEFIK (Centralized Traefik Reverse Proxy for all LEMP stacks)
+    export TRAEFIK_DIR="traefik"
+    export TRAEFIK_PATH="${PROJECT_PATH}/${TRAEFIK_DIR}"
+    export TRAEFIK_DOCKER_YML_FILE="${TRAEFIK_PATH}/docker-compose.yml"
+    # DYNA CONFIGS
+    export TRAEFIK_DYNAMIC_DIR="dynamic"
+    export TRAEFIK_DYNAMIC_PATH="${TRAEFIK_PATH}/${TRAEFIK_DYNAMIC_DIR}"
+    # CERTS/ CERTIFICATES
+    export TRAEFIK_CERTS_DIR="certs"
+    export TRAEFIK_CERTS_PATH="${TRAEFIK_PATH}/${TRAEFIK_CERTS_DIR}"
+    export TRAEFIK_CERTS_YML_FILE_NAME="certs.yml"
+    export TRAEFIK_CERTS_YML_FILE="${TRAEFIK_DYNAMIC_PATH}/${TRAEFIK_CERTS_YML_FILE_NAME}"
+    # LOG FILE
+    export LOG_FILE="${PROJECT_PATH}/debug.log"
+    
+    #####################################################
+    # LOAD FUNCTIONS
+    load_functions
+    wait
+    
+    #####################################################
+    # DEFAULT LEMP STACK IMAGES FOR NEW STACKS
+    export DEFAULT_DB_IMAGE="mysql:latest"
+    export DEFAULT_PHP_IMAGE="php:8.5-rc-fpm-bullseye" # Needs to be FPM version
+    export DEFAULT_PMA_IMAGE="phpmyadmin:latest"
+    export DEFAULT_WP_IMAGE="wordpress:latest" #"wordpress:latest"
+    
+    #####################################################
+    # VARIABLES REQUIRING FUNCTIONS
+    
+    # Detect OS type
+    export OS_NAME="$(detect_os_name)"
+    
+    # VARIABLES REQUIRING FUNCTIONS
+    export HOSTS_FILE=$(detect_os_hosts_file)
+    
+    # HOSTS FILE LOCAL LOOPBACK
+    HOSTS_FILE_LOOPBACK_IP="$(get_local_loopback_ip)"; [ -n "$HOSTS_FILE_LOOPBACK_IP" ] || HOSTS_FILE_LOOPBACK_IP=127.0.0.1
+    export HOSTS_FILE_LOOPBACK_IP
+    
+    # USERNAME
+    if [ -n "$USER" ]; then
+        mlusername=$USER
+        elif [ -n "$LOGNAME" ]; then
+        mlusername=$LOGNAME
+    else
+        mlusername=$(id -un 2>/dev/null || whoami 2>/dev/null)
+    fi
+    
+    #####################################################
+    
+    heading "DOCKER MULTISTACK LEMP"
+    body_msg "by Christopher Sample github.com/studiolxv"
+    line_break
     heading "NEW INSTALL SETUP WIZARD"
-	body_msg "Answer the following questions to begin a new installation of Multistack LEMP."
-	#####################################################
-	# USER INPUT: ADMIN_EMAIL
-
-	# Prompt user to specify the preferred admin email
-	line_break
-	section_title "DEFAULT ADMIN EMAIL" ${C_Magenta}
-	example_msg "This will be used for a default email and fallbacks for email prompts" ${C_Magenta}
-	line_break
-	option_question "Type in your admin or preferred default email:"
-	read -p "$(input_cursor)" USER_INPUT_ADMIN_EMAIL
-
-	# If $USER_INPUT_ADMIN_EMAIL is empty
-	if [ -z "$USER_INPUT_ADMIN_EMAIL" ]; then
-
-		error_msg "No admin email provided. ${C_Reset}Using \"admin@example.com\")"
-
-		export ADMIN_EMAIL="admin@example.com"
-	else
-		export ADMIN_EMAIL="$USER_INPUT_ADMIN_EMAIL"
-	fi
-	line_break
-
-	heading ".ENV FILE"
-	generating_msg "Creating new project root .env file..."
-	warning_msg "Project root, each stack, and each stack container requires its own .env file."
-	# Create .env file with answers
+    body_msg "Answer the following questions to begin a new installation of Multistack LEMP."
+    #####################################################
+    # USER INPUT: ADMIN_EMAIL
+    
+    # Prompt user to specify the preferred admin email
+    line_break
+    section_title "DEFAULT ADMIN EMAIL" ${C_Magenta}
+    example_msg "This will be used for a default email and fallbacks for email prompts" ${C_Magenta}
+    line_break
+    option_question "Type in your admin or preferred default email:"
+    read -p "$(input_cursor)" USER_INPUT_ADMIN_EMAIL
+    
+    # If $USER_INPUT_ADMIN_EMAIL is empty
+    if [ -z "$USER_INPUT_ADMIN_EMAIL" ]; then
+        
+        error_msg "No admin email provided. ${C_Reset}Using \"admin@example.com\")"
+        
+        export ADMIN_EMAIL="admin@example.com"
+    else
+        export ADMIN_EMAIL="$USER_INPUT_ADMIN_EMAIL"
+    fi
+    line_break
+    
+    heading ".ENV FILE"
+    generating_msg "Creating new project root .env file..."
+    warning_msg "Project root, each stack, and each stack container requires its own .env file."
+    # Create .env file with answers
 	cat >"$PROJECT_PATH/.env" <<EOF
 # PROJECT: ${PROJECT_NAME}
 # Created: $(date)
@@ -272,10 +269,10 @@ DEFAULT_PHP_IMAGE="${DEFAULT_PHP_IMAGE}"
 DEFAULT_PMA_IMAGE="${DEFAULT_PMA_IMAGE}"
 DEFAULT_WP_IMAGE="${DEFAULT_WP_IMAGE}"
 EOF
-
-generating_msg ".env Environment variables created successfully."
-warning_msg "Modify these as needed before creating a lemp stack."
-line_break
+    
+    generating_msg ".env Environment variables created successfully."
+    warning_msg "Modify these as needed before creating a lemp stack."
+    line_break
 fi
 
 debug_success_msg "✅ environment.sh sourced successfully."

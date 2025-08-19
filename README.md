@@ -50,10 +50,10 @@ This will attempt to install any package managers or packages for your specifc  
 #     >>> Select an option for domain-one:
 #     >>>
 ```
->⚠️  **POSIX-compatible NOTE**
+>⚠️  **POSIX-COMPATIBILITY NOTE**
 >
 
->Only tested on macOS’s zsh/bash however written to be POSIX-compatible. The project contains code blocks where homebrew is used as the package manager for package download/install/and checks as well as including conditionals to check for os specific, e.g. Chocolatey or Scoop on Windows, however the efficacy of these code blocks were not tested. Submit pull requests if you fix anything for other operating systems.
+>This project was only tested on macOS’s zsh/bash however written to be POSIX-compatible. The project contains code blocks where homebrew is used as the package manager for package download/install/and checks as well as including conditionals to check for os specific, e.g. Chocolatey or Scoop on Windows, however the efficacy of these code blocks were not tested. Submit pull requests if you fix anything for other operating systems.
 
 ## Requirements
 - Terminal of choice – e.g. [iTerm2](https://iterm2.com/) (macOS) or your preferred terminal emulator.
@@ -82,16 +82,16 @@ Each **WordPress container** runs in Docker and is connected to a specific LEMP 
 ### Traefik Container
 
 - Runs traefik to route browsers to each LEMP Stack virtual host domain and subdomains.
-- Building LEMP Stacks creates a new virtual host config file in traefik/dynamic. (ie https://<LEMP_DOMAIN>, https://phpmyadmin.<LEMP_DOMAIN>)
-- Building Wordpress Containers creates a new virtual host subdomain for parent LEMP's domain config file. (ie https://<WORDPRESS_SUBDOMAIN>.<LEMP_DOMAIN>)
+- Building LEMP Stacks creates a new virtual host config file in traefik/dynamic. e.g. https://domain-one.test, https://phpmyadmin.domain-one.test
+- Building Wordpress Containers creates a new virtual host subdomain for parent LEMP's domain config file. e.g. https://subdomain-one.domain-one.test
 
 ### LEMP Compose Stack(s)
 
 - Creates new virutal host domains, Nginx, MySQL, PHP, and phpMyAdmin
-- Unique PHP root directory and independant PHP version for files hosted from the $STACK_NAME/ directory.
-- LEMP's MySQL container contains all databases unique to the LEMP stack and databases created for Wordpress containers under this LEMP STACK.
-- LEMP's PHP container version DOES NOT affect LEMP STACK phpMyAdmin NOR WordPress container's PHP version.
-- LEMP STACK phpMyAdmin routed under LEMP STACK's main domain, (ie https://phpmyadmin.<LEMP_DOMAIN>)
+- Unique PHP root directory and independant PHP version for files hosted from the $STACK_NAME/html directory.
+- LEMP stack's database container contains all databases unique to the LEMP stack and databases created for Wordpress containers under this LEMP STACK.
+- LEMP stack's PHP container version DOES NOT affect LEMP STACK phpMyAdmin NOR WordPress container's PHP version.
+- LEMP stack phpMyAdmin routed under LEMP STACK's main domain, (ie https://phpmyadmin.domain-one.test)
 - LEMP STACK phpMyAdmin container runs its on PHP version inside its own container.
 - LEMP STACK phpMyAdmin container connects to the LEMP's MYSQL container hosting databases unique to the LEMP stack.
 
@@ -105,17 +105,13 @@ Each **WordPress container** runs in Docker and is connected to a specific LEMP 
 
 ---
 
-
-
-
-
 ### Accomplished Goals for the project
 - Forget MAMP/LAMP thats for GRAMPS
 - **Automated LEMP stacks** to quickly spin up any version of php, mysql, and wordpress and launch the browser to display phpmyadmin and main LEMP stack domain on completion of script.
 - **Isolated Docker networks** to serve various images for different projects
 - **Automated Virtual Host and Traefik configuration**:
   - Creates locally signed certificates for virtual host domains and subdomains automatically as well as making changes to your hosts file for you.
-- Automated **database backups** per LEMP stack
+- Automated **database backups** with customizable menu options per LEMP stack
 
 ---
 
@@ -236,4 +232,34 @@ docker-multistack-lemp
     └── traefik.yml
 
 ```
+## Docker Compose Services (example)
+
+### LEMP compose stack containers
+- In the docker-compose.yml file we use variables to name containers and paths so how you name them through the menu wizard will effect how your docker compose stacks will work.
+- For the following example lets say you named a LEMP stack/domain 'domain-one' e.g. `LEMP_SERVER_DOMAIN_NAME="domain-one"` and `LEMP_SERVER_DOMAIN_TLD="test"`
+ - The docker-compose.yml will source `stacks/domain-one/.env` file variables effectively naming your containers as such.
+- This will also create a dockernetwork: `domain_one_lemp_network` that all services and wordpress containers added later will connect to. So all Wordpress containers under a LEMP stack can share one unified LEMP Stack database.
+##### 1. domain-one-phpmyadmin
+- image: [phpmyadmin:latest](https://hub.docker.com/_/phpmyadmin) latest is fine
+- vhost: https://phpmyadmin.domain-one.test
+##### 2. domain-one-php-fpm
+- image: [php:8.x.x-fpm-bullseye](https://hub.docker.com/_/php) or newest version 'fpm' should be chosen
+- vhost: https://domain-one.test <- empty php playground
+##### 3. domain-one-nginx
+- image: [nginx:latest](https://hub.docker.com/_/nginx) latest is fine
+##### 4. domain-one-\${DB_IMAGE}
+- This container will be named which ever database image you chose in the 'Create new LEMP stack' menu option
+-> Example: [mysql:latest](https://hub.docker.com/_/mysql)
+##### 5. domain-one-backups
+- image: [debian:bookworm-slim](https://hub.docker.com/_/debian)
+- Currently only handles our backup scripts and cron backups
+- Debian bookworm-slim can provide you with a reliable foundation plus the exact GNU utilities (find, stat, date, cron, gzip, mysql-client) that make your backup and cleanup scripts work consistently. It also opens doors for compression, encryption, offsite syncing, and observability — all directly within your backup container.
+
+### Wordpress container
+
+- For the following example lets say you named a LEMP stack/domain 'domain-one' and a Wordpress container/subdomain 'subdomain-one' e.g. `WORDPRESS_SERVICE_CONTAINER_NAME="subdomain-one"`
+
+##### 1. domain-one-subdomain-one-wordpress
+- image: [wordpress:latest](https://hub.docker.com/_/wordpress)
+- vhost: https://subdomain-one.domain-one.test
 

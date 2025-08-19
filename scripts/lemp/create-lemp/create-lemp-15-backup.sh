@@ -4,9 +4,12 @@ file_msg "$(basename "$0")"
 
 #####################################################
 # BACKUP SCHEDULE COMMAND
-section_title "ALPINE: BACKUP SCHEDULE"
-status_msg "Choose how often to backup Database while running the container"
-status_msg "${C_Yellow}${C_Underline}NOTE${C_Reset}: This will only run if your Docker '${LEMP_DIR}' container is running."
+heading "BACKUPS - DEBIAN: BOOKWORM SLIM"
+
+section_title "BACKUP SCHEDULE" ${C_Magenta}
+example_msg "Choose how often to create .sql dumps from '${DB_HOST_NAME}' container while also running the '${LEMP_DIR}-backups' container"
+line_break
+warning_msg "NOTE: This will only run if your Docker '${LEMP_DIR}-backups' container is running."
 
 # Options Select Menu START
 line_break
@@ -23,50 +26,50 @@ line_break
 option_question "Select Backup Schedule" ${C_Magenta}
 # Read user input manually
 while true; do
-
-	read -p "$(input_cursor)" backup_choice
-
-	case "$backup_choice" in
-	1)
-		export BACKUPS_CRON_SCHEDULE_DESC="Every 30 minutes"
-		export BACKUPS_CRON_SCHEDULE="*/30 * * * *"
-		break
-		;;
-	2)
-		export BACKUPS_CRON_SCHEDULE_DESC="Every hour"
-		export BACKUPS_CRON_SCHEDULE="0 * * * *"
-		break
-		;;
-	3)
-		export BACKUPS_CRON_SCHEDULE_DESC="Every 3 hours"
-		export BACKUPS_CRON_SCHEDULE="0 */3 * * *"
-		break
-		;;
-	4)
-		export BACKUPS_CRON_SCHEDULE_DESC="Every 6 hours"
-		export BACKUPS_CRON_SCHEDULE="0 */6 * * *"
-		break
-		;;
-	5)
-		export BACKUPS_CRON_SCHEDULE_DESC="Every day"
-		export BACKUPS_CRON_SCHEDULE="0 0 * * *"
-		break
-		;;
-	6) # Fixed: Changed from duplicate 5) to 6)
-		export BACKUPS_CRON_SCHEDULE_DESC="Every 2 days"
-		export BACKUPS_CRON_SCHEDULE="0 0 */2 * *"
-		break
-		;;
-	7) # Fixed: Changed from duplicate 6) to 7)
-		export BACKUPS_CRON_SCHEDULE_DESC="Every week"
-		export BACKUPS_CRON_SCHEDULE="0 0 * * 0"
-		break
-		;;
-	*)
-		error_msg "Invalid choice, please try again."
-		break
-		;;
-	esac
+    
+    read -p "$(input_cursor)" backup_choice
+    
+    case "$backup_choice" in
+        1)
+            export BACKUPS_CRON_SCHEDULE_DESC="Every 30 minutes"
+            export BACKUPS_CRON_SCHEDULE="*/30 * * * *"
+            break
+        ;;
+        2)
+            export BACKUPS_CRON_SCHEDULE_DESC="Every hour"
+            export BACKUPS_CRON_SCHEDULE="0 * * * *"
+            break
+        ;;
+        3)
+            export BACKUPS_CRON_SCHEDULE_DESC="Every 3 hours"
+            export BACKUPS_CRON_SCHEDULE="0 */3 * * *"
+            break
+        ;;
+        4)
+            export BACKUPS_CRON_SCHEDULE_DESC="Every 6 hours"
+            export BACKUPS_CRON_SCHEDULE="0 */6 * * *"
+            break
+        ;;
+        5)
+            export BACKUPS_CRON_SCHEDULE_DESC="Every day"
+            export BACKUPS_CRON_SCHEDULE="0 0 * * *"
+            break
+        ;;
+        6) # Fixed: Changed from duplicate 5) to 6)
+            export BACKUPS_CRON_SCHEDULE_DESC="Every 2 days"
+            export BACKUPS_CRON_SCHEDULE="0 0 */2 * *"
+            break
+        ;;
+        7) # Fixed: Changed from duplicate 6) to 7)
+            export BACKUPS_CRON_SCHEDULE_DESC="Every week"
+            export BACKUPS_CRON_SCHEDULE="0 0 * * 0"
+            break
+        ;;
+        *)
+            error_msg "Invalid choice, please try again."
+            break
+        ;;
+    esac
 done
 
 # Confirm selection
@@ -76,7 +79,7 @@ line_break
 
 #####################################################
 # BACKUP CLEANUP COMMAND
-section_title "ALPINE: BACKUP CLEANUP"
+section_title "BACKUP CLEANUP"
 
 status_msg "Choose a command to cleanup scheduled backups of your Database."
 status_msg "If you chose scheduled backups more frequent than every day choose option 1."
@@ -91,30 +94,30 @@ option_msg "1. ${BACKUPS_CLEANUP_SCRIPT_DESC_ONE}" ${C_Magenta}
 BACKUPS_CLEANUP_SCRIPT_DESC_TWO="Keep all backups from last 30 days, and the Latest of each Month (Forever)"
 option_msg "2. ${BACKUPS_CLEANUP_SCRIPT_DESC_TWO}" ${C_Magenta}
 line_break
-option_question "Select your preferred cleanup command."
+option_question "Select your preferred cleanup command:"
 
 
 # Read user input manually
 while true; do
-	read -p "$(input_cursor)" cleanup_choice
-
-	case "$cleanup_choice" in
-	1)
-		export BACKUPS_CLEANUP_ACTION="one"
-		export BACKUPS_CLEANUP_SCRIPT_DESC="Keep all backups for today, latest per day for last 30 days, latest per month forever"
-
-		break
-		;;
-	2)
-		export BACKUPS_CLEANUP_ACTION="two"
-		export BACKUPS_CLEANUP_SCRIPT_DESC="Keep all backups from last 30 days, and the Latest of each Month (Forever)"
-
-		break
-		;;
-	*)
-		error_msg "Invalid choice, please try again."
-		;;
-	esac
+    read -p "$(input_cursor)" cleanup_choice
+    
+    case "$cleanup_choice" in
+        1)
+            export BACKUPS_CLEANUP_ACTION="one"
+            export BACKUPS_CLEANUP_SCRIPT_DESC="Keep all backups for today, latest per day for last 30 days, latest per month forever"
+            
+            break
+        ;;
+        2)
+            export BACKUPS_CLEANUP_ACTION="two"
+            export BACKUPS_CLEANUP_SCRIPT_DESC="Keep all backups from last 30 days, and the Latest of each Month (Forever)"
+            
+            break
+        ;;
+        *)
+            error_msg "Invalid choice, please try again."
+        ;;
+    esac
 done
 
 # EXEC PERMISSIONS
@@ -124,6 +127,37 @@ chmod +x "${BACKUPS_SCRIPTS_PATH}/lemp-cleanup-backups.sh"
 input_cursor "Selected cleanup strategy: ${C_Magenta}${C_Underline}$BACKUPS_CLEANUP_SCRIPT_DESC"
 line_break
 status_msg "Cleanup script file $LEMP_DIR/scripts/lemp-cleanup-backups.sh"
+
+#####################################################
+# BACKUP CLEANUP ENABLE DRY RUN
+
+section_title "BACKUP CLEANUP DRY RUN OPTIONS" ${C_Magenta}
+example_msg "Enabling the dry run will only log possible cleanup actions without actually deleting any files."
+example_msg "These logs will be stored in the '${LEMP_DIR}/log/backup.log' file as well as printed in the Docker container '${LEMP_DIR}-backups' logs tab on Docker Desktop"
+line_break
+
+option_msg "1. Enable - Only log possible cleanup backups for testing" ${C_Magenta}
+option_msg "2. Disable - Yes cleanup backups" ${C_Magenta}
+line_break
+option_question "What would you like to do?"
+
+while true; do
+    read -p "$(input_cursor)" cleanup_dryrun_choice
+    
+    case "$cleanup_dryrun_choice" in
+        1)
+            export BACKUPS_CLEANUP_DRY_RUN="1"
+            break
+        ;;
+        2)
+            export BACKUPS_CLEANUP_DRY_RUN="0"
+            break
+        ;;
+        *)
+            error_msg "Invalid choice, please try again."
+        ;;
+    esac
+done
 
 #####################################################
 # CREATE BACKUP LOG

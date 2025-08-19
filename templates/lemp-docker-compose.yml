@@ -22,7 +22,7 @@ services:
       - "./${LOG_DIR}:${LOG_CONTAINER_PATH}"
       - "./${BACKUPS_SCRIPTS_DIR}/mysql-healthcheck.sh:/${BACKUPS_CONTAINER_NAME}/scripts/mysql-healthcheck.sh"
     healthcheck:
-      test: ["CMD", "sh", "-c", "/${BACKUPS_CONTAINER_NAME}/scripts/mysql-healthcheck.sh"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --protocol=TCP || exit 1"]
       interval: 10s
       retries: 5
       start_period: 10s
@@ -98,12 +98,8 @@ services:
     tty: true  # Enables color output in logs
     env_file:
       - ./.env
-    depends_on:
-      db:
-        condition: service_healthy
     restart: always
     volumes:
-      - "./crontabs/root:/var/spool/cron/crontabs/root"
       - "./.env:/${BACKUPS_CONTAINER_NAME}/.env:ro"
       - "./${BACKUPS_SCRIPTS_DIR}:/${BACKUPS_CONTAINER_NAME}/scripts"
       - "./${DB_DIR}/backups:/${BACKUPS_CONTAINER_NAME}/backups"
@@ -120,6 +116,9 @@ services:
     command: ["/bin/sh", "-c", "apt-get update && apt-get install -y default-mysql-client bash cron && sleep 2 && exec /${BACKUPS_CONTAINER_NAME}/scripts/lemp-init.sh"]
     networks:
       - ${LEMP_NETWORK_NAME}
+    depends_on:
+      db:
+        condition: service_healthy
 
 networks:
   <<REPLACE_LEMP_NETWORK_NAME>>: # shell script during lemp-create.sh will replace this

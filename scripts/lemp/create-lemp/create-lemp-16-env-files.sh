@@ -8,15 +8,15 @@ section_title "LEMP/.ENV"
 
 # Write the evaluated variables to the .env file for the container
 if [ -f "$LEMP_ENV_FILE" ]; then
-	success_msg "'${LEMP_DIR}/.env' file already exists."
+    success_msg "'${LEMP_DIR}/.env' file already exists."
 else
-	warning_msg "'${LEMP_DIR}/.env' file not found."
-	line_break
-	generating_msg "Generating .env with dynamic variables..."
-	line_break
-	TIMESTAMP=$(env TZ="$OS_TZ" date +"%Y-%m-%d_%I%M%S_%p_%Z")
-
-	# Generate .env file for Docker (without export)
+    warning_msg "'${LEMP_DIR}/.env' file not found."
+    line_break
+    generating_msg "Generating .env with dynamic variables..."
+    line_break
+    TIMESTAMP=$(env TZ="$OS_TZ" date +"%Y-%m-%d_%I%M%S_%p_%Z")
+    
+    # Generate .env file for Docker (without export)
 	cat <<EOL >"$LEMP_ENV_FILE"
 # ENVIRONMENT VARIABLES
 # Created $TIMESTAMP
@@ -115,6 +115,7 @@ BACKUPS_CLEANUP_ACTION="${BACKUPS_CLEANUP_ACTION}"
 BACKUPS_CLEANUP_SCRIPT_DESC="${BACKUPS_CLEANUP_SCRIPT_DESC}"
 BACKUPS_CLEANUP_SCRIPT_FILE="${BACKUPS_CLEANUP_SCRIPT_FILE}"
 BACKUPS_CLEANUP_SCRIPT_FILE_PATH="${BACKUPS_CLEANUP_SCRIPT_FILE_PATH}"
+BACKUPS_CLEANUP_DRY_RUN="${BACKUPS_CLEANUP_DRY_RUN}" # Dry run (only log possible cleanup actions) enable '1', disable '0'
 BACKUPS_CONTAINER_BACKUPS_PATH="${BACKUPS_CONTAINER_BACKUPS_PATH}"
 BACKUPS_CONTAINER_GHOST_BACKUPS_PATH="${BACKUPS_CONTAINER_GHOST_BACKUPS_PATH}"
 #
@@ -131,9 +132,9 @@ LOG_CONTAINER_PATH="${LOG_CONTAINER_PATH}"
 # DEFAULT IMAGES
 DEFAULT_WP_IMAGE="${DEFAULT_WP_IMAGE}"
 EOL
-
-	# Generate lemp-env.sh file to export all variables into docker containers and into cron jobs
-	EXPORT_ENV_FILE="${BACKUPS_SCRIPTS_PATH}/lemp-env.sh"
+    
+    # Generate lemp-env.sh file to export all variables into docker containers and into cron jobs
+    EXPORT_ENV_FILE="${BACKUPS_SCRIPTS_PATH}/lemp-env.sh"
 	cat <<EOL >"$EXPORT_ENV_FILE"
 #!/bin/sh
 # ENVIRONMENT VARIABLE EXPORTS
@@ -236,6 +237,7 @@ export BACKUPS_CLEANUP_ACTION="${BACKUPS_CLEANUP_ACTION}"
 export BACKUPS_CLEANUP_SCRIPT_DESC="${BACKUPS_CLEANUP_SCRIPT_DESC}"
 export BACKUPS_CLEANUP_SCRIPT_FILE="${BACKUPS_CLEANUP_SCRIPT_FILE}"
 export BACKUPS_CLEANUP_SCRIPT_FILE_PATH="${BACKUPS_CLEANUP_SCRIPT_FILE_PATH}"
+export BACKUPS_CLEANUP_DRY_RUN="${BACKUPS_CLEANUP_DRY_RUN}" # Dry run (only log possible cleanup actions) enable '1', disable '0'
 export BACKUPS_CONTAINER_BACKUPS_PATH="${BACKUPS_CONTAINER_BACKUPS_PATH}"
 export BACKUPS_CONTAINER_GHOST_BACKUPS_PATH="${BACKUPS_CONTAINER_GHOST_BACKUPS_PATH}"
 #
@@ -250,7 +252,6 @@ export LOG_PATH="${LOG_PATH}"
 export LOG_CONTAINER_PATH="${LOG_CONTAINER_PATH}"
 #
 # TERMINAL COLORS
-export TERM=xterm-256color
 export C_Reset=\$(tput sgr0)
 export C_Bold=\$(tput bold)
 export C_Underline=\$(tput smul)
@@ -277,6 +278,9 @@ export C_BrightWhite=\$(tput setaf 15)
 get_timestamp() {
 	echo "\$(env TZ="\$OS_TZ" date +"%Y-%m-%d_%H%M%S_%Z")"
 }
+get_local_timestamp() {
+	echo "\$(env TZ="\$OS_TZ" date +"%Y-%m-%d %H:%M%p %Z")"
+}
 get_local_time() {
 	echo "\$(env TZ="\$OS_TZ" date +"%H:%M%p")"
 }
@@ -284,23 +288,33 @@ get_today_dir() {
 	echo "\$(env TZ="\$OS_TZ" date +"%Y-%m-%d")"
 }
 backup_log() {
-	LOCAL_TIME=\$(get_local_time)
-	echo "\${C_Cyan}[\$LOCAL_TIME|$(basename "\$0")]\${C_Reset} \$1" >&2 | tee -a "\${LOG_CONTAINER_PATH}/backup.log"
+  terminal_stamp="[\$(get_local_timestamp)|\$0]"
+  log_stamp="[\$(get_local_timestamp)|\$0]"
+  # terminal (colored)
+  [ -t 2 ] && printf '%s %s%s\n' "\$terminal_stamp" "\$C_BrightBlue" "\$1" >&2
+  # file (plain)
+  printf '%s %s\n' "\$log_stamp" "\$1" >> "\${LOG_CONTAINER_PATH}/backup.log"
+}
+backup_cleanup_file_log() {
+    # terminal (colored)
+    [ -t 2 ] && printf '%s\n' "- \$1" >&2
+    # file (plain)
+    printf '%s\n' "- \$1" >> "\${LOG_CONTAINER_PATH}/backup.log"
 }
 export MYSQL_USER=\$(cat /run/secrets/db_root_user 2>/dev/null)
 export MYSQL_ROOT_PASSWORD=\$(cat /run/secrets/db_root_user_password 2>/dev/null)
 export MYSQL_PWD="\$MYSQL_ROOT_PASSWORD"
 
 EOL
-
-	# Make export-env.sh executable
-	chmod +x "$EXPORT_ENV_FILE"
-
-	if [ -f "$LEMP_ENV_FILE" ] && [ -f "$EXPORT_ENV_FILE" ]; then
-		success_msg "${LEMP_DIR}/.env and ${LEMP_DIR}/scripts/lemp-env.sh files created successfully"
-	else
-		error_msg "Failed to create ${LEMP_DIR}/.env or lemp-env.sh, please check manually."
-	fi
+    
+    # Make export-env.sh executable
+    chmod +x "$EXPORT_ENV_FILE"
+    
+    if [ -f "$LEMP_ENV_FILE" ] && [ -f "$EXPORT_ENV_FILE" ]; then
+        success_msg "${LEMP_DIR}/.env and ${LEMP_DIR}/scripts/lemp-env.sh files created successfully"
+    else
+        error_msg "Failed to create ${LEMP_DIR}/.env or lemp-env.sh, please check manually."
+    fi
 fi
 
 #
