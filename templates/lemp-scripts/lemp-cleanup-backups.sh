@@ -9,10 +9,30 @@ set -a
 . "/${BACKUPS_CONTAINER_NAME}/scripts/lemp-env.sh"
 set +a
 
-# --- Defaults ---------------------------------------------------------------
-: "${BACKUPS_CONTAINER_BACKUPS_PATH:=/latest-backups/backups}"
+backup_heading "🧼 CLEANUP SQL BACKUPS"
+backup_log "📄 Running ${BACKUPS_CLEANUP_ACTION} $(basename "$0") >>>"
+
+# --- Quick Bail ---------------------------------------------------------------
+if [ ! -n "${BACKUPS_CLEANUP_ACTION}" ] || [ "${BACKUPS_CLEANUP_ACTION}" = "none" ]; then
+    backup_log "❌ No SQL cleanup action specified, exiting."
+    exit 0
+fi
+
+# --- Defaults -------------------------------------`--------------------------
+: "${BACKUPS_USE_OS_TRASH:=1}"
 BACKUPS_ROOT="$BACKUPS_CONTAINER_BACKUPS_PATH"
-DRY_RUN="${BACKUPS_DRY_RUN:-0}"
+DRY_RUN="${BACKUPS_CLEANUP_DRY_RUN:-0}"
+
+# Normalize DRY_RUN to accept 1/yes/true/on
+is_dry_run() {
+    case "$(printf '%s' "$DRY_RUN" | tr '[:upper:]' '[:lower:]')" in
+        1|yes|true|on) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+
+dry_run_status() { is_dry_run && printf 'ON' || printf 'OFF'; }
 
 # --- Time helpers -----------------------------------------------------------
 NOW_EPOCH=$(date +%s)
@@ -30,8 +50,8 @@ file_epoch() {
     fi
 }
 
-day_key() { date -u -d "@$1" +%Y-%m-%d; }
-month_key() { date -u -d "@$1" +%Y-%m; }
+day_key() { date -u -d "@${1}" +%Y-%m-%d; }
+month_key() { date -u -d "@${1}" +%Y-%m; }
 
 # Keep-map helpers using temp files (works in POSIX sh)
 # map file content: "epoch|path"
@@ -48,29 +68,106 @@ keep_map_maybe_update() { # $1 mapdir, $2 key, $3 epoch, $4 path
     fi
 }
 
+# --- OS Trash detection ---------------------------------------------------
+TRASH_CMD=""
+detect_os_trash() {
+    if command -v trash >/dev/null 2>&1; then
+        TRASH_CMD="trash"; return 0
+    fi
+    if command -v trash-put >/dev/null 2>&1; then
+        TRASH_CMD="trash-put"; return 0
+    fi
+    if command -v gio >/dev/null 2>&1; then
+        TRASH_CMD="gio"; return 0
+    fi
+    if command -v gvfs-trash >/dev/null 2>&1; then
+        TRASH_CMD="gvfs-trash"; return 0
+    fi
+    if command -v kioclient5 >/dev/null 2>&1; then
+        TRASH_CMD="kioclient5"; return 0
+    fi
+    # Windows (Git Bash/WSL/Cygwin) — use PowerShell recycle bin if available
+    if command -v powershell.exe >/dev/null 2>&1; then
+        TRASH_CMD="powershell"; return 0
+    fi
+    return 1
+}
+
+os_trash() { # $1 = path
+    case "$TRASH_CMD" in
+        trash)
+        trash -- "$1" ;;
+        trash-put)
+        trash-put -- "$1" ;;
+        gio)
+        gio trash "$1" ;;
+        gvfs-trash)
+        gvfs-trash "$1" ;;
+        kioclient5)
+        kioclient5 moveToTrash "$1" ;;
+        powershell)
+            # Attempt to send to Recycle Bin via PowerShell .NET API
+            powershell.exe -NoProfile -Command "\
+            try { \
+              Add-Type -AssemblyName Microsoft.VisualBasic; \
+              $p = [System.IO.Path]::GetFullPath(\"$1\"); \
+              [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($p,'OnlyErrorDialogs','SendToRecycleBin'); \
+        } catch { exit 1 }" ;;
+        *)
+        return 1 ;;
+    esac
+}
+
+detect_os_trash || true
+
 rm_safe() {
-    if [ "$DRY_RUN" = "1" ]; then
-        backup_log "DRY-RUN 🧪 would delete: $1"
+    if is_dry_run; then
+        if [ "$BACKUPS_USE_OS_TRASH" = "1" ] && [ -n "$TRASH_CMD" ]; then
+            backup_cleanup_file_log "(cleanup) DRY-RUN 🧪 would move to OS Trash -> $(basename "$1")"
+        else
+            backup_cleanup_file_log "(cleanup) DRY-RUN 🧪 would delete -> $(basename "$1")"
+        fi
+        return 0
+    fi
+    if [ "$BACKUPS_USE_OS_TRASH" = "1" ] && [ -n "$TRASH_CMD" ]; then
+        os_trash "$1" 2>/dev/null || rm -f -- "$1"
     else
         rm -f -- "$1"
     fi
 }
 
-# --- Start ------------------------------------------------------------------
-backup_log "(cleanup) 🧼 Scanning -> $BACKUPS_ROOT (per container subfolder)"
+if is_dry_run; then
+    backup_heading "CLEANUP DRY-RUN"
+    backup_log "(cleanup) No files will be deleted (effective DRY_RUN=$(dry_run_status))"
+else
+    backup_heading "CLEANUP ACTIVE"
+    backup_log "(cleanup) Files will be permanently deleted (effective DRY_RUN=$(dry_run_status))"
+fi
 
+if [ "$BACKUPS_USE_OS_TRASH" = "1" ]; then
+    if [ -n "$TRASH_CMD" ]; then
+        backup_log "(cleanup) 🧺 OS Trash: ON via $TRASH_CMD"
+    else
+        backup_log "(cleanup) ⚠️ OS Trash requested but unavailable — falling back to permanent delete"
+        backup_log "(cleanup)    Tip: macOS → 'brew install trash' | Linux → 'gio trash' or 'trash-cli' | Windows → PowerShell available via Git Bash/WSL"
+    fi
+else
+    backup_log "(cleanup) 🧺 OS Trash: OFF (permanent delete)"
+fi
+# --- Start ------------------------------------------------------------------
 # Walk each container directory one-by-one
 for CONTAINER_DIR in "$BACKUPS_ROOT"/*; do
     [ -d "$CONTAINER_DIR" ] || continue
     CONTAINER_NAME=$(basename "$CONTAINER_DIR")
-    backup_log "🔎 Container: $CONTAINER_NAME"
+    CONTAINER_NAME_UPPER=$(echo "$CONTAINER_NAME" | tr '[:lower:]' '[:upper:]')
+    backup_heading "(cleanup) $CONTAINER_NAME_UPPER BACKUP SQL"
     
     KEPT_DAYS=0
     KEPT_MONTHS=0
     DELETED=0
     STAGED=0
     SKIPPED_TODAY=0
-    [ "$DRY_RUN" = "1" ] && backup_log "DRY-RUN 🧪 No files will be deleted."
+    
     
     TMPDIR="$(mktemp -d)"
     # First pass: compute keepers (per-day within last 30d, per-month for >30d)
@@ -96,44 +193,66 @@ for CONTAINER_DIR in "$BACKUPS_ROOT"/*; do
     done
     
     # Log keep decisions
-    for KFILE in "$TMPDIR"/day_* "$TMPDIR"/month_*; do
-        [ -f "$KFILE" ] || continue
-        KEY="$(basename "$KFILE")"
-        GROUP="${KEY#*_}"
-        KEEP_PATH="$(cut -d'|' -f2 "$KFILE")"
-        case "$KEY" in
-            day_*)   KEPT_DAYS=$((KEPT_DAYS + 1));   backup_cleanup_file_log "✅ Keeping latest backup for $GROUP (per-day): $KEEP_PATH" ;;
-            month_*) KEPT_MONTHS=$((KEPT_MONTHS + 1)); backup_cleanup_file_log "✅ Keeping latest backup for $GROUP (per-month): $KEEP_PATH" ;;
-            *)       backup_cleanup_file_log "✅ Keeping latest backup for $GROUP: $KEEP_PATH" ;;
-        esac
-    done
+    # Print a single heading and then list per-day keepers
+    set -- "$TMPDIR"/day_*
+    if [ -e "$1" ]; then
+        backup_log "(cleanup) 📂 Keeping Latest per-day"
+        backup_log ""
+        for KFILE in "$TMPDIR"/day_*; do
+            [ -f "$KFILE" ] || continue
+            KEY="$(basename "$KFILE")"
+            GROUP="${KEY#*_}"
+            KEEP_PATH="$(cut -d'|' -f2 "$KFILE")"
+            KEPT_DAYS=$((KEPT_DAYS + 1))
+            backup_cleanup_file_log "(cleanup) 📂 [$GROUP] -> $(basename "$KEEP_PATH")"
+        done
+    fi
+    # Print a single heading and then list per-month keepers
+    set -- "$TMPDIR"/month_*
+    if [ -e "$1" ]; then
+        backup_log "(cleanup) 📂 Keeping Latest per-month"
+        for KFILE in "$TMPDIR"/month_*; do
+            [ -f "$KFILE" ] || continue
+            KEY="$(basename "$KFILE")"
+            GROUP="${KEY#*_}"
+            KEEP_PATH="$(cut -d'|' -f2 "$KFILE")"
+            KEPT_MONTHS=$((KEPT_MONTHS + 1))
+            backup_cleanup_file_log "(cleanup) 📂 [$GROUP] -> $(basename "$KEEP_PATH")"
+        done
+    fi
     
     case "${BACKUPS_CLEANUP_ACTION:-}" in
         one)
             # Delete everything in scope except the chosen keepers.
+            # Pass 1: per-day deletions (<30d)
+            backup_log "(cleanup) 🗑️ Deleting Non-Latest per-day"
             find "$CONTAINER_DIR" -type f -name "*.sql" -print | \
             while IFS= read -r FILE; do
                 EPOCH="$(file_epoch "$FILE")" || continue
                 [ -n "$EPOCH" ] || continue
                 AGE=$((NOW_EPOCH - EPOCH))
-                
-                if [ "$AGE" -lt "$DAY_SECS" ]; then
-                    continue
-                fi
-                
-                if [ "$AGE" -lt "$DAYS30_SECS" ]; then
-                    KEY="day_$(day_key "$EPOCH")"
-                else
-                    KEY="month_$(month_key "$EPOCH")"
-                fi
-                
+                [ "$AGE" -lt "$DAY_SECS" ] && continue  # skip today's files
+                [ "$AGE" -ge "$DAYS30_SECS" ] && continue  # only per-day set here
+                KEY="day_$(day_key "$EPOCH")"
                 KEEP="$(keep_map_get_path "$TMPDIR" "$KEY")"
                 if [ -n "$KEEP" ] && [ "$FILE" != "$KEEP" ]; then
-                    if [ "$AGE" -lt "$DAYS30_SECS" ]; then
-                        backup_cleanup_file_log "🗑️ Deleting (per-day set) -> $FILE"
-                    else
-                        backup_cleanup_file_log "🗑️ Deleting (per-month set) -> $FILE"
-                    fi
+                    backup_cleanup_file_log "(cleanup) 🗑️ Deleting -> $(basename "$FILE")"
+                    rm_safe "$FILE"
+                    DELETED=$((DELETED + 1))
+                fi
+            done
+            # Pass 2: per-month deletions (>=30d)
+            backup_log "(cleanup) 🗑️ Deleting Non-Latest per-month"
+            find "$CONTAINER_DIR" -type f -name "*.sql" -print | \
+            while IFS= read -r FILE; do
+                EPOCH="$(file_epoch "$FILE")" || continue
+                [ -n "$EPOCH" ] || continue
+                AGE=$((NOW_EPOCH - EPOCH))
+                [ "$AGE" -lt "$DAYS30_SECS" ] && continue  # only per-month set here
+                KEY="month_$(month_key "$EPOCH")"
+                KEEP="$(keep_map_get_path "$TMPDIR" "$KEY")"
+                if [ -n "$KEEP" ] && [ "$FILE" != "$KEEP" ]; then
+                    backup_cleanup_file_log "(cleanup) 🗑️ Deleting -> $(basename "$FILE")"
                     rm_safe "$FILE"
                     DELETED=$((DELETED + 1))
                 fi
@@ -149,8 +268,12 @@ for CONTAINER_DIR in "$BACKUPS_ROOT"/*; do
                 [ -f "$KFILE" ] || continue
                 KEEP_PATH="$(cut -d'|' -f2 "$KFILE")"
                 if [ -n "$KEEP_PATH" ] && [ -f "$KEEP_PATH" ]; then
-                    backup_cleanup_file_log "📦 Staging monthly keeper -> $KEEP_PATH"
-                    mv -f -- "$KEEP_PATH" "$STAGE"/ 2>/dev/null || true
+                    backup_cleanup_file_log "(cleanup) 📦 Staging monthly keeper -> $(basename "$KEEP_PATH")"
+                    if is_dry_run; then
+                        backup_cleanup_file_log "(cleanup) DRY-RUN 🧪 would stage -> $(basename "$KEEP_PATH")"
+                    else
+                        mv -f -- "$KEEP_PATH" "$STAGE"/ 2>/dev/null || true
+                    fi
                     STAGED=$((STAGED + 1))
                 fi
             done
@@ -165,25 +288,32 @@ for CONTAINER_DIR in "$BACKUPS_ROOT"/*; do
                 [ -n "$EPOCH" ] || continue
                 AGE=$((NOW_EPOCH - EPOCH))
                 if [ "$AGE" -ge "$DAYS30_SECS" ]; then
-                    backup_cleanup_file_log "🗑️ Deleting (>30d) -> $FILE"
+                    backup_cleanup_file_log "(cleanup) 🗑️ Deleting (>30d) -> $(basename "$FILE")"
                     rm_safe "$FILE"
                     DELETED=$((DELETED + 1))
                 fi
             done
             
-            # Move back and remove stage
-            mv "$STAGE"/*.sql "$CONTAINER_DIR"/ 2>/dev/null || true
-            rmdir "$STAGE" 2>/dev/null || true
+            if is_dry_run; then
+                backup_log "(cleanup) DRY-RUN 🧪 would move staged keepers back"
+            else
+                mv "$STAGE"/*.sql "$CONTAINER_DIR"/ 2>/dev/null || true
+            fi
+            if is_dry_run; then
+                backup_log "(cleanup) DRY-RUN 🧪 would remove stage directory"
+            else
+                rmdir "$STAGE" 2>/dev/null || true
+            fi
         ;;
         *)
-            backup_log "❌ Invalid or empty BACKUPS_CLEANUP_ACTION: ${BACKUPS_CLEANUP_ACTION:-<unset>}"
+            backup_log "(cleanup) ❌ Invalid or empty BACKUPS_CLEANUP_ACTION: ${BACKUPS_CLEANUP_ACTION:-<unset>}"
             rm -rf "$TMPDIR"
             exit 1
         ;;
     esac
     
-    backup_log "📈 Summary for $CONTAINER_NAME: kept-per-day=$KEPT_DAYS, kept-per-month=$KEPT_MONTHS, deleted=$DELETED, skipped-today=$SKIPPED_TODAY, staged=$STAGED"
+    backup_cleanup_file_log "(cleanup) 📈 Summary for $CONTAINER_NAME: kept-per-day=$KEPT_DAYS, kept-per-month=$KEPT_MONTHS, deleted=$DELETED, skipped-today=$SKIPPED_TODAY, staged=$STAGED"
     rm -rf "$TMPDIR"
 done
 
-backup_log "🎉 [$(date)] Backup cleanup completed successfully!"
+backup_section_end "(cleanup) 🎉 [$(date)] Backup cleanup completed successfully!"

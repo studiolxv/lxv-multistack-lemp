@@ -101,7 +101,6 @@ body_msg() {
 }
 export -f body_msg
 
-
 status_msg() {
 	msg="$1"
 	color="${2:-${C_Reset}}"
@@ -134,7 +133,7 @@ option_question() {
 	msg="$1"
 	color="${2:-${C_Magenta}}"
 	char="${3:->}"
-	length=${#msg}                            # Get the length of the string
+	length=${#msg}                                  # Get the length of the string
 	hashes=$(printf "${char}%.0s" $(seq 1 $length)) # Generate a string of '#' of the same length
 	# echo "${C_Status}#${C_Reset}   ${color}  ${char}${char}${char}${char}${hashes}${C_Reset}"
 	echo "${C_Status}#${C_Reset}   ${C_Reset}  ${color}${char}${char}${char} ${C_Reset}${msg}"
@@ -175,18 +174,18 @@ warning_msg() {
 export -f warning_msg
 
 cat_msg() {
-    file="$1"
-    color="${2:-${C_BrightYellow}}"
+	file="$1"
+	color="${2:-${C_BrightYellow}}"
 
-    if [ ! -f "$file" ]; then
-        warning_msg "File '$file' not found."
-        return 1
-    fi
+	if [ ! -f "$file" ]; then
+		warning_msg "File '$file' not found."
+		return 1
+	fi
 	body_msg "✏️  Writing contents of '$file':" ${color}
 	body_msg "|   " ${color}
-    while IFS= read -r line || [ -n "$line" ]; do
-        body_msg "|   ${line}" ${color}
-    done < "$file"
+	while IFS= read -r line || [ -n "$line" ]; do
+		body_msg "|   ${line}" ${color}
+	done <"$file"
 }
 export -f cat_msg
 
@@ -197,9 +196,9 @@ celebrate_msg() {
 export -f celebrate_msg
 
 success_msg() {
-		msg="$1"
-		# echo "${C_Status}#${C_Reset}     ✅${C_Green} ${msg} ${C_Reset}"
-		echo "${C_Status}#${C_Reset}     ${C_Green}✔︎ ${C_Reset}${msg}"
+	msg="$1"
+	# echo "${C_Status}#${C_Reset}     ✅${C_Green} ${msg} ${C_Reset}"
+	echo "${C_Status}#${C_Reset}     ${C_Green}✔︎ ${C_Reset}${msg}"
 }
 debug_success_msg() {
 	if [ -n "$debug_multistack" ] && [ "$debug_multistack" = "true" ]; then

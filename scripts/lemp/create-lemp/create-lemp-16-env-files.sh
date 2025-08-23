@@ -118,6 +118,8 @@ BACKUPS_CLEANUP_SCRIPT_FILE_PATH="${BACKUPS_CLEANUP_SCRIPT_FILE_PATH}"
 BACKUPS_CLEANUP_DRY_RUN="${BACKUPS_CLEANUP_DRY_RUN}" # Dry run (only log possible cleanup actions) enable '1', disable '0'
 BACKUPS_CONTAINER_BACKUPS_PATH="${BACKUPS_CONTAINER_BACKUPS_PATH}"
 BACKUPS_CONTAINER_GHOST_BACKUPS_PATH="${BACKUPS_CONTAINER_GHOST_BACKUPS_PATH}"
+BACKUPS_USE_OS_TRASH="${BACKUPS_USE_OS_TRASH}" # 1 moves deleted backups to the OS Trash/Recycle Bin, while 0 permanently deletes them.
+BACKUPS_REQUIRE_OS_TRASH="${BACKUPS_REQUIRE_OS_TRASH}" # 1 Abort cleanup if OS Trash cmd missing, while 0 falls back to permanent deletion
 #
 # DATABASE SECRETS
 LEMP_SECRETS_PATH="${LEMP_SECRETS_PATH}"
@@ -131,6 +133,7 @@ LOG_CONTAINER_PATH="${LOG_CONTAINER_PATH}"
 #
 # DEFAULT IMAGES
 DEFAULT_WP_IMAGE="${DEFAULT_WP_IMAGE}"
+
 EOL
     
     # Generate lemp-env.sh file to export all variables into docker containers and into cron jobs
@@ -240,6 +243,8 @@ export BACKUPS_CLEANUP_SCRIPT_FILE_PATH="${BACKUPS_CLEANUP_SCRIPT_FILE_PATH}"
 export BACKUPS_CLEANUP_DRY_RUN="${BACKUPS_CLEANUP_DRY_RUN}" # Dry run (only log possible cleanup actions) enable '1', disable '0'
 export BACKUPS_CONTAINER_BACKUPS_PATH="${BACKUPS_CONTAINER_BACKUPS_PATH}"
 export BACKUPS_CONTAINER_GHOST_BACKUPS_PATH="${BACKUPS_CONTAINER_GHOST_BACKUPS_PATH}"
+export BACKUPS_USE_OS_TRASH="${BACKUPS_USE_OS_TRASH}" # 1 moves deleted backups to the OS Trash/Recycle Bin, while 0 permanently deletes them.
+export BACKUPS_REQUIRE_OS_TRASH="${BACKUPS_REQUIRE_OS_TRASH}" # 1 Abort cleanup if OS Trash cmd missing, while 0 falls back to permanent deletion
 #
 # DATABASE SECRETS
 export LEMP_SECRETS_PATH="${LEMP_SECRETS_PATH}"
@@ -251,59 +256,110 @@ export LOG_DIR="${LOG_DIR}"
 export LOG_PATH="${LOG_PATH}"
 export LOG_CONTAINER_PATH="${LOG_CONTAINER_PATH}"
 #
-# TERMINAL COLORS
-export C_Reset=\$(tput sgr0)
-export C_Bold=\$(tput bold)
-export C_Underline=\$(tput smul)
-# Standard Colors
-export C_Black=\$(tput setaf 0)
-export C_Red=\$(tput setaf 1)
-export C_Green=\$(tput setaf 2)
-export C_Yellow=\$(tput setaf 3)
-export C_Blue=\$(tput setaf 4)
-export C_Magenta=\$(tput setaf 5)
-export C_Cyan=\$(tput setaf 6)
-export C_White=\$(tput setaf 7)
-# Bright Colors
-export C_BrightBlack=\$(tput setaf 8)
-export C_BrightRed=\$(tput setaf 9)
-export C_BrightGreen=\$(tput setaf 10)
-export C_BrightYellow=\$(tput setaf 11)
-export C_BrightBlue=\$(tput setaf 12)
-export C_BrightMagenta=\$(tput setaf 13)
-export C_BrightCyan=\$(tput setaf 14)
-export C_BrightWhite=\$(tput setaf 15)
+# # TERMINAL COLORS (tput)
+# export C_Reset=\$(tput sgr0)
+# export C_Bold=\$(tput bold)
+# export C_Underline=\$(tput smul)
+# export C_Black=\$(tput setaf 0)
+# export C_Red=\$(tput setaf 1)
+# export C_Green=\$(tput setaf 2)
+# export C_Yellow=\$(tput setaf 3)
+# export C_Blue=\$(tput setaf 4)
+# export C_Magenta=\$(tput setaf 5)
+# export C_Cyan=\$(tput setaf 6)
+# export C_White=\$(tput setaf 7)
+# export C_BrightBlack=\$(tput setaf 8)
+# export C_BrightRed=\$(tput setaf 9)
+# export C_BrightGreen=\$(tput setaf 10)
+# export C_BrightYellow=\$(tput setaf 11)
+# export C_BrightBlue=\$(tput setaf 12)
+# export C_BrightMagenta=\$(tput setaf 13)
+# export C_BrightCyan=\$(tput setaf 14)
+# export C_BrightWhite=\$(tput setaf 15)
+
+# TERMINAL COLORS (Truecolor-ready; no tput)
+export C_Reset='\033[0m';
+export C_Bold='\033[1m';
+export C_Underline='\033[4m'
+# Standard (24-bit examples; swap to taste)
+export C_Black='\033[38;2;0;0;0m'
+export C_Red='\033[38;2;205;0;0m'
+export C_Green='\033[38;2;0;205;0m'
+export C_Yellow='\033[38;2;205;205;0m'
+export C_Blue='\033[38;2;0;0;205m'
+export C_Magenta='\033[38;2;205;0;205m'
+export C_Cyan='\033[38;2;0;205;205m'
+export C_White='\033[38;2;229;229;229m'
+# Bright
+export C_BrightBlack='\033[38;2;127;127;127m'
+export C_BrightRed='\033[38;2;255;0;0m'
+export C_BrightGreen='\033[38;2;0;255;0m'
+export C_BrightYellow='\033[38;2;255;255;0m'
+export C_BrightBlue='\033[38;2;0;0;255m'
+export C_BrightMagenta='\033[38;2;255;0;255m'
+export C_BrightCyan='\033[38;2;0;255;255m'
+export C_BrightWhite='\033[38;2;255;255;255m'
+export C_DockerBlue='\033[38;2;36;150;237m'  # #2496ED
+
 #
 # FUNCTIONS
 get_timestamp() {
 	echo "\$(env TZ="\$OS_TZ" date +"%Y-%m-%d_%H%M%S_%Z")"
 }
+
 get_local_timestamp() {
 	echo "\$(env TZ="\$OS_TZ" date +"%Y-%m-%d %H:%M%p %Z")"
 }
+
 get_local_time() {
 	echo "\$(env TZ="\$OS_TZ" date +"%H:%M%p")"
 }
+
 get_today_dir() {
 	echo "\$(env TZ="\$OS_TZ" date +"%Y-%m-%d")"
 }
-backup_log() {
-  terminal_stamp="[\$(get_local_timestamp)|\$0]"
-  log_stamp="[\$(get_local_timestamp)|\$0]"
-  # terminal (colored)
-  [ -t 2 ] && printf '%s %s%s\n' "\$terminal_stamp" "\$C_BrightBlue" "\$1" >&2
-  # file (plain)
-  printf '%s %s\n' "\$log_stamp" "\$1" >> "\${LOG_CONTAINER_PATH}/backup.log"
+
+backup_heading() {
+    # terminal (colored)
+    [ -t 2 ] && printf '%s\n' "----------------------------------------------------" >&2
+    [ -t 2 ] && printf '%s\n' "" >&2
+    [ -t 2 ] && printf '%s\n' "\$1" >&2
+    [ -t 2 ] && printf '%s\n' "" >&2
+    # file (plain)
+    printf '%s\n'"\$1" >> "\${LOG_CONTAINER_PATH}/backup.log"
 }
+
+backup_section_end() {
+    # terminal (colored)
+    [ -t 2 ] && printf '%s\n' "----------------------------------------------------" >&2
+    [ -t 2 ] && printf '%s\n' "\$1" >&2
+    [ -t 2 ] && printf '%s\n' "----------------------------------------------------" >&2
+    # file (plain)
+    printf '%s\n'"\$1" >> "\${LOG_CONTAINER_PATH}/backup.log"
+}
+
+backup_log() {
+    terminal_stamp="\$(get_local_timestamp)|\$(basename \$0)]"
+    log_stamp="[\$(get_timestamp)|\$(basename \$0)]"
+    # Docker logs already have timestamps setting
+    # printf '%s%s\n' "\${terminal_stamp}" "\${1}" >&2
+    printf '%s\n' "\${1}" >&2
+    # file (plain)
+    printf '%s %s\n' "\${log_stamp}" "\${1}" >> "\${LOG_CONTAINER_PATH}/backup.log"
+}
+
 backup_cleanup_file_log() {
     # terminal (colored)
-    [ -t 2 ] && printf '%s\n' "- \$1" >&2
+    [ -t 2 ] && printf '%s\n' "\$1" >&2
     # file (plain)
     printf '%s\n' "- \$1" >> "\${LOG_CONTAINER_PATH}/backup.log"
 }
+
 export MYSQL_USER=\$(cat /run/secrets/db_root_user 2>/dev/null)
 export MYSQL_ROOT_PASSWORD=\$(cat /run/secrets/db_root_user_password 2>/dev/null)
 export MYSQL_PWD="\$MYSQL_ROOT_PASSWORD"
+
+backup_log "📄 Exported Variables \$(basename "\$0") >>>"
 
 EOL
     

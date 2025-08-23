@@ -190,7 +190,7 @@ https://domain-two.test
 ### Directory Layout (example)
 
 ```
-docker-multistack-lemp
+lxv-multistack-lemp
 ├── _environment.sh
 ├── functions
 ├── scripts

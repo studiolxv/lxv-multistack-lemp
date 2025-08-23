@@ -1,10 +1,78 @@
 #!/bin/sh
 # Ensure environment variables are loaded
 set -a # Auto-export all variables
+: "${BACKUPS_CONTAINER_NAME:=latest-backups}"
 . /etc/environment
 . "/${BACKUPS_CONTAINER_NAME}/.env"
 . "/${BACKUPS_CONTAINER_NAME}/scripts/lemp-env.sh"
 set +a # Disable auto-export
+
+# --- Auto-discover DB hosts from current env and .env (no manual config) ----
+if [ -z "${BACKUP_MULTI_HOST_DONE:-}" ]; then
+    CANDS="db"
+    # From current environment
+    ENV_HOSTS=$(env | awk -F= '/(_DB_HOST|MYSQL_HOST|WORDPRESS_DB_HOST|WP_DB_HOST)/ {print $2}')
+    CANDS="$CANDS $ENV_HOSTS"
+    # From container .env file
+    if [ -f "/${BACKUPS_CONTAINER_NAME}/.env" ]; then
+        FILE_HOSTS=$(awk -F= '/(_DB_HOST|MYSQL_HOST|WORDPRESS_DB_HOST|WP_DB_HOST)/ {gsub(/"|\047/,"",$2); print $2}' "/${BACKUPS_CONTAINER_NAME}/.env")
+        CANDS="$CANDS $FILE_HOSTS"
+    fi
+    # Deduplicate and sanitize
+    HOSTS=""
+    for H in $CANDS; do
+        [ -z "$H" ] && continue
+        case "$H" in localhost|127.0.0.1|::1) continue;; esac
+        case " $HOSTS " in *" $H "*) : ;; *) HOSTS="$HOSTS $H";; esac
+    done
+    # Probe which hosts are reachable via mysql
+    REACHABLE=""
+    for H in $HOSTS; do
+        TEST_SQL_OPTS="-h \"$H\" -u root --protocol=TCP --connect-timeout=3"
+        if [ -n "${MYSQL_ROOT_PASSWORD:-}" ]; then
+            TEST_SQL_OPTS="$TEST_SQL_OPTS -p\"$MYSQL_ROOT_PASSWORD\""
+        fi
+        if eval mysql $TEST_SQL_OPTS -e "SELECT 1;" >/dev/null 2>&1; then
+            REACHABLE="$REACHABLE $H"
+        else
+            backup_log "(${BACKUP_TYPE}) ⚠️ Skipping unreachable DB host: $H"
+        fi
+    done
+    COUNT=$(printf "%s\n" $REACHABLE | awk 'NF' | wc -l | tr -d ' ')
+    if [ "${COUNT:-0}" -gt 1 ]; then
+        backup_log "(${BACKUP_TYPE}) 🌐 Auto-discovered DB hosts: $REACHABLE"
+        for H in $REACHABLE; do
+            backup_heading "📡 Auto-backup host: $H"
+            BACKUP_MULTI_HOST_DONE=1 MYSQL_HOST="$H" sh "$0" "$BACKUP_TYPE"
+        done
+        exit 0
+    elif [ "${COUNT:-0}" -eq 1 ] && [ -z "${MYSQL_HOST:-}" ]; then
+        MYSQL_HOST=$(printf "%s\n" $REACHABLE | awk 'NF{print; exit}')
+    fi
+fi
+
+if [ -z "${MYSQL_HOST:-}" ]; then
+    backup_log "(init) ⚠️ MYSQL_HOST is not set; defaulting to service name 'db' (TCP)"
+    MYSQL_HOST="db"
+fi
+MYSQL_SQL_OPTS="-h \"$MYSQL_HOST\" -u root --protocol=TCP --connect-timeout=5"
+MYSQL_DUMP_OPTS="-h \"$MYSQL_HOST\" -u root --protocol=TCP"
+
+# If a root password is provided, add it to both client option sets
+if [ -n "${MYSQL_ROOT_PASSWORD:-}" ]; then
+    MYSQL_SQL_OPTS="$MYSQL_SQL_OPTS -p\"$MYSQL_ROOT_PASSWORD\""
+    MYSQL_DUMP_OPTS="$MYSQL_DUMP_OPTS -p\"$MYSQL_ROOT_PASSWORD\""
+fi
+
+# Normalize container paths to absolute (avoid /root/<relative> surprises under cron)
+case "$BACKUPS_CONTAINER_BACKUPS_PATH" in
+    /*) : ;;
+    *) BACKUPS_CONTAINER_BACKUPS_PATH="/$BACKUPS_CONTAINER_BACKUPS_PATH" ;;
+esac
+case "$BACKUPS_CONTAINER_GHOST_BACKUPS_PATH" in
+    /*) : ;;
+    *) BACKUPS_CONTAINER_GHOST_BACKUPS_PATH="/$BACKUPS_CONTAINER_GHOST_BACKUPS_PATH" ;;
+esac
 
 BACKUP_TYPE="$1"
 
@@ -13,34 +81,41 @@ TIMESTAMP=$(get_timestamp)
 LOCAL_TIME=$(get_local_time)
 TODAY_DIR=$(get_today_dir)
 
-
-backup_log "📄 Running ${BACKUP_TYPE} $(basename "$0") >>>"
+# Log
+BACKUP_TYPE_UPPER=$(printf '%s' "${BACKUP_TYPE}" | tr '[:lower:]' '[:upper:]')
+backup_heading "⤵️ ${BACKUP_TYPE_UPPER} BACKUP"
+backup_log "📄 Running $(basename "$0") >>>"
 
 # Starting Message
 if [ "$BACKUP_TYPE" = "initial" ]; then
     backup_log "(${BACKUP_TYPE}) 🚀 Initial database backup..."
-    elif [ "$BACKUP_TYPE" = "cron" ] || [ "$BACKUP_TYPE" = "cron-test" ]; then
+    elif [ "$BACKUP_TYPE" = "cron" ]; then
     backup_log "(${BACKUP_TYPE}) 🕒 Running cron scheduled database backup..."
     backup_log "(${BACKUP_TYPE}) 🕒 Schedule: $BACKUPS_CRON_SCHEDULE_DESC"
     elif [ "$BACKUP_TYPE" = "shutdown" ]; then
     backup_log "(${BACKUP_TYPE}) ⚠️ Shutdown database backup..."
     elif [ "$BACKUP_TYPE" = "ghost" ]; then
-    backup_log "(${BACKUP_TYPE}) ⚠️ Running (Container ONLY) Ghost database backup..."
+    backup_log "(${BACKUP_TYPE}) ⚠️ Running (Unmounted Ghost database backup..."
     backup_log "(${BACKUP_TYPE}) ⚠️ Once the container is stopped, these backups are lost."
 else
-    backup_log "(${BACKUP_TYPE}) ❌ Invalid backup type..."
-    exit 1
+    backup_log "(${BACKUP_TYPE}) 👽 Unknown custom backup type detected"
 fi
 
 backup_log "(${BACKUP_TYPE}) 🔍 ENVIRONMENT VARIABLES CHECK"
 backup_log "(${BACKUP_TYPE}) ├── \$MYSQL_HOST = $MYSQL_HOST"
-backup_log "(${BACKUP_TYPE}) └── if \$MYSQL_HOST = is empty environment variables are not being set"
+backup_log "(${BACKUP_TYPE}) └── if \$MYSQL_HOST is empty, environment variables are not being set"
+backup_log "(${BACKUP_TYPE}) ├── BACKUPS_CONTAINER_BACKUPS_PATH = $BACKUPS_CONTAINER_BACKUPS_PATH"
+backup_log "(${BACKUP_TYPE}) └── BACKUPS_CONTAINER_GHOST_BACKUPS_PATH = $BACKUPS_CONTAINER_GHOST_BACKUPS_PATH"
+
+if ! eval mysql $MYSQL_SQL_OPTS -e "SELECT 1;" >/dev/null 2>&1; then
+    backup_log "(${BACKUP_TYPE}) ❗ MySQL connectivity check failed (host=$MYSQL_HOST, tcp). Check credentials/password and host network."
+fi
 
 # Perform DUMP ALL ${DB_HOST_NAME} database's "create" backup
 
 # Detect if the database is MariaDB or MySQL
-DB_TYPE=$(mysql -h "$MYSQL_HOST" -u root -e "SELECT @@version_comment;" 2>/dev/null | awk 'NR==2 {print}')
-DB_VERSION=$(mysql -h "$MYSQL_HOST" -u root -e "SELECT VERSION();" 2>/dev/null | awk 'NR==2 {print $1}')
+DB_TYPE=$(eval mysql $MYSQL_SQL_OPTS -e "SELECT @@version_comment;" 2>/dev/null | awk 'NR==2 {print}')
+DB_VERSION=$(eval mysql $MYSQL_SQL_OPTS -e "SELECT VERSION();" 2>/dev/null | awk 'NR==2 {print $1}')
 DUMP_VERSION=$(mysqldump --version | awk '{print $5}')
 
 backup_log "(${BACKUP_TYPE}) 🫙 Current Database: ${DB_TYPE} ${DB_VERSION}"
@@ -76,7 +151,7 @@ CREATE_ALL_BACKUPS_FILE="${FULL_DB_DUMP_PATH}/${TIMESTAMP}_${DB_HOST_NAME}_creat
 
 backup_log "(${BACKUP_TYPE}) 📦 Backing up all container databases for: ${DB_HOST_NAME}"
 
-mysqldump -h "$MYSQL_HOST" -u root \
+eval mysqldump $MYSQL_DUMP_OPTS \
 ${DUMP_OPTIONS} --all-databases >"$CREATE_ALL_BACKUPS_FILE"
 
 if [ -s "$CREATE_ALL_BACKUPS_FILE" ]; then
@@ -91,17 +166,16 @@ fi
 ####################################################################
 # DUMP EACH LEMP DATABASE (separate .sql files)
 
-backup_log "(${BACKUP_TYPE}) ⤵️ Dumping all databases in the container..."
-
-# Get list of databases, excluding system DBs
-DATABASES=$(mysql -h "$MYSQL_HOST" -u root \
--e "SHOW DATABASES;" | awk 'NR>1 && !/^(mysql|information_schema|performance_schema|sys)$/' || true)
+# Get list of databases, excluding system DBs (simple & reliable)
+DATABASES=$(mysql --protocol=TCP -h "$MYSQL_HOST" -u root ${MYSQL_ROOT_PASSWORD:+-p"$MYSQL_ROOT_PASSWORD"} \
+  -N -s -e "SHOW DATABASES;" 2>/dev/null | awk '!/^(mysql|information_schema|performance_schema|sys)$/')
 
 backup_log "(${BACKUP_TYPE}) 📂 Found databases: $DATABASES"
 
 # Loop through databases and dump each separately
 for DB in $DATABASES; do
-    
+    backup_log "(${BACKUP_TYPE}) ➜ Dumping DB: $DB"
+
     # Setup backup directory
     if [ "$BACKUP_TYPE" = "ghost" ]; then
         # Setup ghost backup directory (NOT PERSISTENT - SAVED TO CONTAINER ONLY)
@@ -110,14 +184,14 @@ for DB in $DATABASES; do
         # Setup backup directory (PERSISTENT - SAVED TO LOCAL MACHINE)
         DB_DUMP_PATH="${BACKUPS_CONTAINER_BACKUPS_PATH}/${DB}"
     fi
-    
+
     mkdir -p "$DB_DUMP_PATH"
-    
+
     DB_BACKUPS_FILE="${DB_DUMP_PATH}/${TIMESTAMP}_${DB}_create_db_${BACKUP_TYPE}.sql"
-    
-    mysqldump -h "$MYSQL_HOST" -u root \
+
+    eval mysqldump $MYSQL_DUMP_OPTS \
     ${DUMP_OPTIONS} --databases "$DB" >"$DB_BACKUPS_FILE"
-    
+
     # Check if the backup was successful
     if [ -s "$DB_BACKUPS_FILE" ]; then
         backup_log "(${BACKUP_TYPE}) ✅ Backup success for: $DB"

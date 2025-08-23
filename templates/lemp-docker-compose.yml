@@ -17,7 +17,7 @@ services:
     volumes:
       - "./.env:/etc/environment:ro"
       - "./${DB_DIR}/data:/${DB_CONTAINER_DATA_PATH}"
-      - "./${DB_DIR}/${DB_CONF_FILE}:/${DB_CONTAINER_CONF_PATH}"
+      - "./${DB_CONF_FILE}:/${DB_CONTAINER_CONF_PATH}"
       - "./${DB_DIR}/backups:/${BACKUPS_CONTAINER_NAME}/backups"
       - "./${LOG_DIR}:${LOG_CONTAINER_PATH}"
       - "./${BACKUPS_SCRIPTS_DIR}/mysql-healthcheck.sh:/${BACKUPS_CONTAINER_NAME}/scripts/mysql-healthcheck.sh"
@@ -104,16 +104,20 @@ services:
       - "./${BACKUPS_SCRIPTS_DIR}:/${BACKUPS_CONTAINER_NAME}/scripts"
       - "./${DB_DIR}/backups:/${BACKUPS_CONTAINER_NAME}/backups"
       - "./${LOG_DIR}:${LOG_CONTAINER_PATH}"
+      - "./${DB_DIR}/cron:/etc/cron.d"
     environment:
       TZ: ${OS_TZ}
+      COLORTERM: truecolor
       TERM: xterm-256color
+      FORCE_COLOR: 1 # uncomment to force
+      # NO_COLOR: 1 # uncomment to disable everywhere
       MYSQL_HOST: db # Use the service name as the hostname
       MYSQL_USER: root
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_user_password
     secrets:
       - db_root_user
       - db_root_user_password
-    command: ["/bin/sh", "-c", "apt-get update && apt-get install -y default-mysql-client bash cron && sleep 2 && exec /${BACKUPS_CONTAINER_NAME}/scripts/lemp-init.sh"]
+    command: ["/bin/sh","-c","apt-get update && apt-get install -y default-mysql-client bash cron gettext-base procps util-linux && sleep 2 && exec /${BACKUPS_CONTAINER_NAME}/scripts/lemp-init.sh"]
     networks:
       - ${LEMP_NETWORK_NAME}
     depends_on:
