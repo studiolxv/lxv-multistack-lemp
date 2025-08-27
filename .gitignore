@@ -13,6 +13,9 @@
 # Multi-Stack Files
 /stacks/*
 
+# PMA Themes Files
+/assets/phpmyadmin
+
 # Draft Markdown Files
 *.draft.md
 

@@ -18,7 +18,7 @@ EOL
 		fi
 	fi
 }
-export -f check_log_file_exists_or_create
+
 
 # EXAMPLE: log_action "Example Log Message" $(basename "$0") $(caller | cut -d' ' -f1)
 log_action() {
@@ -37,7 +37,7 @@ log_action() {
 
 EOL
 }
-export -f log_action
+
 
 # EXAMPLE: log_error "Example Error Message" $(basename "$0") $(caller | cut -d' ' -f1)
 log_error() {
@@ -57,7 +57,7 @@ log_error() {
 
 EOL
 }
-export -f log_error
+
 
 # EXAMPLE: log_success "Example Success Message" $(basename "$0") $(caller | cut -d' ' -f1)
 log_success() {
@@ -69,7 +69,7 @@ log_success() {
 	check_log_file_exists_or_create
 
 	# Echo to terminal
-	if [ -n "$debug_multistack" ] && [ "$debug_multistack" = "true" ]; then
+	if [ -n "$opt_debug" ] && [ "$opt_debug" = "true" ]; then
 		success_msg "$message"
 	fi
 
@@ -79,4 +79,4 @@ log_success() {
 
 EOL
 }
-export -f log_success
+

@@ -51,7 +51,7 @@ replace_wp_url() {
 	esac
 
 	# Run the MYSQL 8.0 SQL command inside the MySQL container
-	# 	docker exec -i "$DB_HOST_NAME" mysql -u "$WORDPRESS_DB_USER" -p"$WORDPRESS_DB_USER_PASSWORD" "$WORDPRESS_DB_NAME" <<EOF
+	# 	docker exec -i "$DB_HOST_NAME" mysql -u "$WORDPRESS_DB_USER" -p"$WORDPRESS_DB_PASSWORD" "$WORDPRESS_DB_NAME" <<EOF
 	# SET @DB_NAME = '${WORDPRESS_DB_NAME}';
 	# SET @OLD_URL = '${old_url}';
 	# SET @NEW_URL = '${new_url}';
@@ -89,7 +89,7 @@ replace_wp_url() {
 	# EOF
 
 	# Run the MYSQL 5.7 SQL command inside the MySQL container
-	docker exec -i "$DB_HOST_NAME" mysql -u "$WORDPRESS_DB_USER" -p"$WORDPRESS_DB_USER_PASSWORD" "$WORDPRESS_DB_NAME" <<EOF
+	docker exec -i "$DB_HOST_NAME" mysql -u "$WORDPRESS_DB_USER" -p"$WORDPRESS_DB_PASSWORD" "$WORDPRESS_DB_NAME" <<EOF
 SET @DB_NAME = '${WORDPRESS_DB_NAME}';
 SET @OLD_URL = '${old_url}';
 SET @NEW_URL = '${new_url}';
@@ -136,4 +136,4 @@ EOF
 
 	line_break
 }
-export -f replace_wp_url
+

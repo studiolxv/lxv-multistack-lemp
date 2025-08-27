@@ -1,6 +1,6 @@
 #!/bin/sh
-. "$PROJECT_PATH/_environment.sh"
-file_msg "$(basename "$0")"
+. "$PROJECT_PATH/_env-setup.sh"
+# debug_file_msg "$(current_basename)"
 
 #####################################################
 # WP-ADMIN: WORDPRESS
@@ -47,24 +47,35 @@ fi
 # WORDPRESS: ADMIN USER NAME
 line_break
 heading "WORDPRESS: ADMIN USER NAME"
-example_msg "${C_Yellow}${C_Underline}NOTE${C_Reset}: A common method of brute force hacking is to use a \"dictionary\" of common username and password combinations. For this reason, it is often recommended to avoid common usernames such as \"admin\"."
+example_msg "${C_Yellow}${C_Underline}NOTE${C_Reset}: A common method of brute force hacking is to use a \"dictionary\" of common username and password combinations. For this reason, it is often recommended to avoid common usernames such as \"admin\". WordPress usernames must be <=60 chars and contain only letters, numbers, _, ., @, or -"
 line_break
 option_question "Enter a WordPress admin username, or leave blank to auto-generate a secure username:"
 printf "%s " "$(input_cursor)"
 read USER_INPUT_WORDPRESS_ADMIN_USER
 
-if [ -z "$USER_INPUT_WORDPRESS_ADMIN_USER" ]; then
-
-	input_cursor "No wp-admin admin username provided. Generating a secure wp-admin username (72 alphanumeric characters)"
-
-	# Set default wp-admin admin username
-	DEFAULT_WORDPRESS_ADMIN_USER="$(openssl rand -hex 36 | cut -c1-72)"
-
-	WORDPRESS_ADMIN_USER="$DEFAULT_WORDPRESS_ADMIN_USER"
-
-else
-	WORDPRESS_ADMIN_USER="$USER_INPUT_WORDPRESS_ADMIN_USER"
+RAW_ADMIN_USER="${USER_INPUT_WORDPRESS_ADMIN_USER}"
+if [ -z "$RAW_ADMIN_USER" ]; then
+    input_cursor "No wp-admin admin username provided. Generating a secure wp-admin username (random 32 chars)"
+    RAW_ADMIN_USER="$(openssl rand -hex 16)"
 fi
+
+# Sanitize: allow only WordPress-valid chars and trim to 60 chars
+SAFE_ADMIN_USER=$(printf '%s' "$RAW_ADMIN_USER" | tr -cd '[:alnum:]_.@-' | cut -c1-60)
+
+if [ -z "$SAFE_ADMIN_USER" ]; then
+    SAFE_ADMIN_USER="admin$(date +%s)"
+    warning_msg "Provided username invalid/empty. Using fallback username: ${SAFE_ADMIN_USER}"
+fi
+
+# If sanitization changed the username, warn
+if [ "$SAFE_ADMIN_USER" != "$RAW_ADMIN_USER" ]; then
+    warning_msg "Admin username sanitized to '${SAFE_ADMIN_USER}' (max 60 chars; allowed charset)."
+fi
+
+WORDPRESS_ADMIN_USER="$SAFE_ADMIN_USER"
+line_break
+input_cursor "${C_Reset}WORDPRESS_ADMIN_USER: '${C_Magenta}${WORDPRESS_ADMIN_USER}${C_Reset}'"
+line_break
 
 #####################################################
 # WORDPRESS: ADMIN USER PASSWORD
@@ -88,14 +99,25 @@ if [ -z "$USER_INPUT_WORDPRESS_ADMIN_PASSWORD" ]; then
 
 	# WP-CLI: WORDPRESS: ADMIN USER PASSWORD
 	WORDPRESS_ADMIN_USER_PASSWORD="$DEFAULT_WORDPRESS_ADMIN_USER_PASSWORD"
+
 else
 	WORDPRESS_ADMIN_USER_PASSWORD="$USER_INPUT_WORDPRESS_ADMIN_PASSWORD"
 fi
 
+# Clamp password length to 255 to satisfy WordPress schema (user_pass varchar(255))
+PASS_LEN=$(printf '%s' "$WORDPRESS_ADMIN_USER_PASSWORD" | wc -c); PASS_LEN=$((PASS_LEN-1))
+if [ "$PASS_LEN" -gt 255 ]; then
+    WORDPRESS_ADMIN_USER_PASSWORD=$(printf '%s' "$WORDPRESS_ADMIN_USER_PASSWORD" | cut -c1-255)
+    warning_msg "Admin password exceeded 255 characters and was truncated to fit WordPress limits."
+	line_break
+	input_cursor "${C_Yellow}NEW ${C_Reset}admin user password:'${C_Magenta}${WORDPRESS_ADMIN_USER_PASSWORD}${C_Reset}'" ${C_Magenta}
+	line_break
+fi
+
 #####################################################
 # EXPORTS
-export WORDPRESS_ADMIN_USER_EMAIL
 export WORDPRESS_ADMIN_USER
+export WORDPRESS_ADMIN_USER_EMAIL
 export WORDPRESS_ADMIN_USER_PASSWORD
 
 #####################################################

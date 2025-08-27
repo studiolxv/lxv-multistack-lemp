@@ -14,7 +14,7 @@ source_lemp_stack_env() {
 		exit 1
 	fi
 }
-export -f source_lemp_stack_env
+
 
 source_wordpress_stack_env() {
 	local stack_name="${1:-$STACK_NAME}"
@@ -40,22 +40,3 @@ source_wordpress_stack_env() {
 		exit 1
 	fi
 }
-export -f source_wordpress_stack_env
-
-get_env_variable_value() {
-	local var_name="$1"
-	local file_name="${2:-$LEMP_ENV_FILE}"
-	if [ -f "${file_name}" ]; then
-		local var_value
-		# Extract the value, remove surrounding quotes if they exist
-		var_value=$(grep -E "^${var_name}=" "${file_name}" | cut -d '=' -f2- | sed -e 's/^"//' -e 's/"$//')
-		if [ -n "${var_value}" ]; then
-			echo "${var_value}"
-		else
-			return 1 # Indicate failure
-		fi
-	else
-		return 1 # Indicate failure
-	fi
-}
-export -f get_env_variable_value

@@ -1,6 +1,6 @@
 #!/bin/sh
-. "$PROJECT_PATH/_environment.sh"
-file_msg "$(basename "$0")"
+. "$PROJECT_PATH/_env-setup.sh"
+# debug_file_msg "$(current_basename)"
 
 section_title "PHPMYADMIN"
 
@@ -35,7 +35,7 @@ else
 	line_break
 	cat <<EOL >"$PHPMYADMIN_FILE_CONF"
 # LEMP phpmyadmin/phpmyadmin.conf
-ServerName phpmyadmin.${LEMP_SERVER_DOMAIN}
+ServerName https://phpmyadmin.${LEMP_SERVER_DOMAIN}
 EOL
 
 	# Output generated '${LEMP_DIR}/${PHPMYADMIN_DIR}/phpmyadmin.conf' for verification
@@ -107,6 +107,27 @@ else
 
 	input_cursor "Selected phpMyAdmin image: ${C_Magenta}$PHPMYADMIN_IMAGE"
 fi
+
+#####################################################
+# PHPMYADMIN THEMES
+
+cat > "${PHPMYADMIN_PATH}/config.user.inc.php" <<'PHP'
+<?php
+$i = 1;
+
+// Resolve at container runtime from environment
+// Prefer official phpMyAdmin docker envs if set; otherwise fall back to your custom ones; then to sensible defaults.
+$cfg['Servers'][$i]['host']        = getenv('PMA_HOST') ?: getenv('DB_HOST_NAME') ?: 'db';
+$cfg['Servers'][$i]['auth_type']   = 'cookie';
+
+// pmadb configuration storage
+$cfg['Servers'][$i]['pmadb']       = getenv('PMA_PMADB') ?: 'phpmyadmin';
+$cfg['Servers'][$i]['controluser'] = getenv('PMA_CONTROLUSER') ?: 'pma';
+$cfg['Servers'][$i]['controlpass'] = getenv('PMA_CONTROLPASS') ?: 'strong-pma-password';
+
+// Theme default (make it overridable via env PMA_THEME)
+$cfg['ThemeDefault'] = getenv('PMA_THEME') ?: 'boodark-teal';
+PHP
 
 #####################################################
 # EXPORT

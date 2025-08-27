@@ -1,9 +1,11 @@
 #!/bin/sh
-. "$PROJECT_PATH/_environment.sh"
-file_msg "$(basename "$0")"
+. "$PROJECT_PATH/_env-setup.sh"
+# debug_file_msg "$(current_basename)"
 
 #####################################################
-# EXPORTS
+# STATIC EXPORTS
+# Many vars set in previous scripts, e.g. LEMP_SERVER_DOMAIN, STACK_NAME, etc.
+# More vars are set in the next scripts
 
 # NEW LEMP STACK
 export NEW_STACK_NAME="${LEMP_SERVER_DOMAIN_NAME}"
@@ -13,7 +15,7 @@ export NEW_STACK_PATH="${STACKS_PATH}/${LEMP_SERVER_DOMAIN_NAME}"
 export LEMP_DIR="${NEW_STACK_NAME}"
 
 # LEMP Stack Container
-export LEMP_CONTAINER_NAME="${LEMP_SERVER_DOMAIN_NAME}_lemp"
+export LEMP_CONTAINER_NAME="$(sanitize_string "${LEMP_SERVER_DOMAIN_NAME}" "_")_lemp"
 export LEMP_PATH="${NEW_STACK_PATH}"
 
 # LEMP Docker Compose .yaml File
@@ -29,18 +31,14 @@ export SECRETS_DIR="secrets"
 export LEMP_SECRETS_PATH="${LEMP_PATH}/${SECRETS_DIR}"
 
 # DATABASE
-export DB_DIR="database"
 export DB_DATA_DIR="data"
-export DB_PATH="$LEMP_PATH/${DB_DIR}"
-export DB_DATA_PATH="${DB_PATH}/${DB_DATA_DIR}"
+
 # PATH INSIDE THE CONTAINER
 export DB_CONTAINER_DATA_PATH="/var/lib/mysql"
 
 # BACKUPS
 export BACKUPS_CONTAINER_NAME="${LEMP_SERVER_DOMAIN_NAME}-backups"
 export BACKUPS_DIR="backups"
-export BACKUPS_PATH="${DB_PATH}/${BACKUPS_DIR}"
-export BACKUPS_CRONTAB_FILE="${DB_PATH}/cron/backups"
 export BACKUPS_SCRIPTS_DIR="scripts"
 export BACKUPS_SCRIPTS_PATH="${LEMP_PATH}/${BACKUPS_SCRIPTS_DIR}"
 export BACKUPS_CLEANUP_SCRIPT_FILE="lemp-cleanup-backups.sh"

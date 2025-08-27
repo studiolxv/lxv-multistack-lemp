@@ -2,31 +2,96 @@
 #####################################################
 # CREATE & MANAGE FUNCTIONS
 
-# Function to list all available LEMP stacks
-list_stacks() {
-	find "$STACKS_PATH" -mindepth 1 -maxdepth 1 -type d -exec basename {} \;
-}
-export -f list_stacks
+# Unified lister
+# Usage:
+#   list_dirs stacks <mode>
+#   list_dirs containers <mode> <stack_name>
+# Modes: time_desc (default), time_asc, alpha_asc, alpha_desc
+list_dirs() {
+    kind="$1"            # stacks | containers
+    mode="${2:-time_desc}"
+    stack_name="$3"     # required for containers
 
-# Function to list WordPress containers inside a LEMP stack
-list_containers() {
-	stack_name="$1"
-	find "$STACKS_PATH/$stack_name/containers" -mindepth 1 -maxdepth 1 -type d -exec basename {} \;
+    case "$kind" in
+        stacks)
+            base_dir="$STACKS_PATH"
+            ;;
+        containers)
+            if [ -z "$stack_name" ]; then
+                echo "❌ list_dirs: stack_name missing for containers" >&2
+                return 1
+            fi
+            base_dir="$STACKS_PATH/$stack_name/containers"
+            ;;
+        *)
+            echo "❌ list_dirs: unknown kind '$kind' (use 'stacks' or 'containers')" >&2
+            return 1
+            ;;
+    esac
+
+    # Ensure base_dir exists
+    [ -d "$base_dir" ] || return 0
+
+    case "$mode" in
+        alpha_asc)
+            find "$base_dir" -mindepth 1 -maxdepth 1 -type d -print0 \
+              | xargs -0 -I{} basename "{}" \
+              | sort
+            ;;
+        alpha_desc)
+            find "$base_dir" -mindepth 1 -maxdepth 1 -type d -print0 \
+              | xargs -0 -I{} basename "{}" \
+              | sort -r
+            ;;
+        time_desc)
+            if [ "$(uname)" = "Darwin" ]; then
+                find "$base_dir" -mindepth 1 -maxdepth 1 -type d -print0 \
+                  | xargs -0 -I{} stat -f '%m\t%N' "{}" \
+                  | sort -nr \
+                  | cut -f2- \
+                  | sed 's!.*/!!'
+            else
+                find "$base_dir" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\0' 2>/dev/null \
+                  | sort -z -nr \
+                  | tr '\0' '\n' \
+                  | cut -d' ' -f2- \
+                  | sed 's!.*/!!'
+            fi
+            ;;
+        time_asc)
+            if [ "$(uname)" = "Darwin" ]; then
+                find "$base_dir" -mindepth 1 -maxdepth 1 -type d -print0 \
+                  | xargs -0 -I{} stat -f '%m\t%N' "{}" \
+                  | sort -n \
+                  | cut -f2- \
+                  | sed 's!.*/!!'
+            else
+                find "$base_dir" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\0' 2>/dev/null \
+                  | sort -z -n \
+                  | tr '\0' '\n' \
+                  | cut -d' ' -f2- \
+                  | sed 's!.*/!!'
+            fi
+            ;;
+        *)
+            echo "❌ Unknown sort mode: $mode (use 'time_desc', 'time_asc', 'alpha_asc', or 'alpha_desc')" >&2
+            return 1
+            ;;
+    esac
 }
-export -f list_containers
 
 # Function to list and select a LEMP stack
 # Ensure function is not redefined
 select_lemp_stack() {
 	section_title "Select a LEMP Stack"
 
-	# Get available stacks using list_stacks and store in a string
+	# Get available stacks using list_dirs and store in a string
 	stacks=""
 	while IFS= read -r stack; do
 		stacks="${stack}"
 		# stacks="${stacks}\n${stack}"
 	done <<EOF
-$(list_stacks)
+$(list_dirs stacks time_asc)
 EOF
 
 	# Check if any stacks exist
@@ -73,7 +138,7 @@ EOF
 		esac
 	done
 }
-export -f select_lemp_stack
+
 
 # Function to list and select a WordPress container within a LEMP stack
 # Ensure function is not redefined
@@ -87,7 +152,7 @@ select_wordpress_container() {
 	while IFS= read -r container; do
 		containers="${containers}\n${container}"
 	done <<EOF
-$(list_containers "$stack_name")
+$(list_dirs containers time_asc "$stack_name")
 EOF
 
 	# Check if any containers exist
@@ -134,7 +199,7 @@ EOF
 		esac
 	done
 }
-export -f select_wordpress_container
+
 
 # Function to open URLs based on the operating system
 open_link() {
@@ -154,4 +219,6 @@ open_link() {
 		echo "Opening Link: Could not detect the operating system, please open the link manually"
 	fi
 }
-export -f open_link
+
+
+

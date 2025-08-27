@@ -1,6 +1,6 @@
 #!/bin/sh
-. "$PROJECT_PATH/_environment.sh"
-file_msg "$(basename "$0")"
+. "$PROJECT_PATH/_env-setup.sh"
+# debug_file_msg "$(current_basename)"
 
 #####################################################
 # MYSQL DATABASE INITIALIZATION
@@ -36,8 +36,8 @@ if [ -z "$WORDPRESS_DB_USER" ]; then
 	exit 1
 fi
 
-if [ -z "$WORDPRESS_DB_USER_PASSWORD" ]; then
-	error_msg "❌ Missing required variable: WORDPRESS_DB_USER_PASSWORD"
+if [ -z "$WORDPRESS_DB_PASSWORD" ]; then
+	error_msg "❌ Missing required variable: WORDPRESS_DB_PASSWORD"
 	exit 1
 fi
 
@@ -74,7 +74,7 @@ else
 	#####################################################
 	# CREATE WORDPRESS DATABASE
 
-	section_msg "INITIALIZE WORDPRESS DATABASE"
+	section_title "INITIALIZE WORDPRESS DATABASE"
 
 	generating_msg "Create database '${C_Yellow}$WORDPRESS_DB_NAME${C_Reset}' in ${C_Yellow}${LEMP_CONTAINER_NAME}${C_Reset}'s ${C_Yellow}${DB_HOST_NAME}${C_Reset} container" ${C_BrightWhite}
 	generating_msg "Creating user '${C_Yellow}$WORDPRESS_DB_USER${C_Reset}' in database '${C_Yellow}$WORDPRESS_DB_NAME${C_Reset}'" ${C_BrightWhite}
@@ -83,15 +83,15 @@ else
 	# Create WordPress database and user (idempotent)
 	docker exec -i "${DB_HOST_NAME}" sh -lc "mysql -uroot -p\"$ROOT_PW\"" <<SQL >/dev/null 2>&1
 CREATE DATABASE IF NOT EXISTS \`${WORDPRESS_DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER IF NOT EXISTS '${WORDPRESS_DB_USER}'@'%' IDENTIFIED BY '${WORDPRESS_DB_USER_PASSWORD}';
-ALTER USER '${WORDPRESS_DB_USER}'@'%' IDENTIFIED BY '${WORDPRESS_DB_USER_PASSWORD}';
+CREATE USER IF NOT EXISTS '${WORDPRESS_DB_USER}'@'%' IDENTIFIED BY '${WORDPRESS_DB_PASSWORD}';
+ALTER USER '${WORDPRESS_DB_USER}'@'%' IDENTIFIED BY '${WORDPRESS_DB_PASSWORD}';
 GRANT ALL PRIVILEGES ON \`${WORDPRESS_DB_NAME}\`.* TO '${WORDPRESS_DB_USER}'@'%';
 FLUSH PRIVILEGES;
 SQL
 
 	sleep 4
 
-	section_msg "CHECK WP DB PASSWORD"
+	section_title "CHECK WP DB PASSWORD"
 
 	docker exec -i "${DB_HOST_NAME}" mysql -u root -p"${ROOT_PW}" -e "SELECT user, host, authentication_string FROM mysql.user WHERE user='${WORDPRESS_DB_USER}';"
 

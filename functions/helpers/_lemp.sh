@@ -10,16 +10,16 @@ is_lemp_running() {
         return 1 # False (not running)
     fi
 }
-export -f is_lemp_running
+
 
 check_and_create_stack_network() {
     stack_name=${1:-$STACK_NAME}
     # Load stack env (defines LEMP_NETWORK_NAME, LEMP_PATH, etc.)
     source_lemp_stack_env ${stack_name}
-    
+
     net_name=${LEMP_NETWORK_NAME:-${stack_name}_lemp_network}
     heading "Checking Network: ${net_name}"
-    
+
     # Ensure Docker is available
     if ! docker info >/dev/null 2>&1; then
         if command -v error_msg >/dev/null 2>&1; then
@@ -29,7 +29,7 @@ check_and_create_stack_network() {
         fi
         return 1
     fi
-    
+
     # If network exists, we are good
     if docker network inspect "$net_name" >/dev/null 2>&1; then
         # Check ownership label
@@ -55,7 +55,7 @@ check_and_create_stack_network() {
                 fi
                 return 0
             fi
-            
+
             # Interactive choice (default: Recreate)
             if command -v warning_msg >/dev/null 2>&1; then
                 if [ -n "$owner_label" ]; then
@@ -78,7 +78,7 @@ check_and_create_stack_network() {
                 fi
                 echo "[WARN] You can recreate it (recommended when moving stacks). The script will then let docker-compose create the network with correct labels. Or keep it (may cause 'not created by this project' errors unless marked external)."
             fi
-            
+
             # Allow env override for non-interactive runs
             # FORCE_NETWORK_RECREATE=true  -> auto recreate
             # KEEP_MISMATCHED_NETWORK=true -> auto keep
@@ -88,7 +88,7 @@ check_and_create_stack_network() {
                 elif [ "${KEEP_MISMATCHED_NETWORK:-}" = "true" ]; then
                 choice="k"
             fi
-            
+
             if [ -z "$choice" ]; then
                 printf "Do you want to [R]ecreate the network or [K]eep it as-is? [R/k]: "
                 IFS= read -r choice
@@ -121,7 +121,7 @@ check_and_create_stack_network() {
             return 0
         fi
     fi
-    
+
     # Defer network creation to docker-compose unless explicitly forced
     if [ "${FORCE_PRECREATE_NETWORK:-}" = "true" ]; then
         if command -v running_msg >/dev/null 2>&1; then
@@ -145,7 +145,7 @@ check_and_create_stack_network() {
             return 1
         fi
     fi
-    
+
     # Default path: do not create here. Let docker-compose create it with proper labels.
     if command -v status_msg >/dev/null 2>&1; then
         status_msg "Letting docker-compose create '${net_name}' so ownership labels are correct."
@@ -154,13 +154,13 @@ check_and_create_stack_network() {
     fi
     return 0
 }
-export -f check_and_create_stack_network
+
 
 start_lemp() {
     stack_name=${1:-$STACK_NAME}
     # Contains some overrides to default vars if exists
     source_lemp_stack_env ${stack_name}
-    
+
     # Check if LEMP services are running
     if ! is_lemp_running ${stack_name}; then
         heading "Starting LEMP services..."
@@ -177,11 +177,11 @@ start_lemp() {
             line_break
             exit 1
         fi
-        
+
         # Wait for the services to start
         # write a function that loops until the services are up
         # docker-compose -f "${LEMP_DOCKER_COMPOSE_YML}" ps | grep 'Up' >/dev/null
-        
+
         ######## START WAIT
         timeout=${2:-60} # Default timeout of 60 seconds
         start_time=$(date +%s)
@@ -198,7 +198,7 @@ start_lemp() {
                 sleep 2
             else
                 line_break
-                if [ -n "$debug_multistack" ] && [ "$debug_multistack" = "true" ]; then
+                if [ -n "$opt_debug" ] && [ "$opt_debug" = "true" ]; then
                     success_msg "LEMP services are now up and running."
                 fi
                 lemp_started_message
@@ -213,7 +213,7 @@ start_lemp() {
         lemp_started_message
     fi
 }
-export -f start_lemp
+
 
 restart_lemp() {
     stack_name=${1:-$STACK_NAME}
@@ -238,7 +238,7 @@ stop_lemp() {
         line_break
         running_msg "% docker-compose -f ${LEMP_DIR}/docker-compose.yml down"
         docker-compose -f "${LEMP_DOCKER_COMPOSE_YML}" down
-        
+
         success_msg "LEMP container stopped."
         line_break
     else
@@ -246,11 +246,12 @@ stop_lemp() {
         line_break
     fi
 }
-export -f stop_lemp
+
 
 lemp_started_message() {
-    stack_name=${1:-$STACK_NAME}
-    source_lemp_stack_env ${stack_name}
+    STACK_NAME=${1:-$STACK_NAME}
+    STACK_NAME_UC=$(uc_word "$STACK_NAME")
+    source_lemp_stack_env ${STACK_NAME}
     line_break
     status_msg "- Container Name: ${C_Status}${LEMP_CONTAINER_NAME}"
     status_msg "- Host Files Path: ${C_Status}${LEMP_PATH}"
@@ -260,13 +261,19 @@ lemp_started_message() {
     line_break
     status_msg "🖥️  Now opening your default browser to the WordPress site and phpMyAdmin..."
     line_break
-    
+
     sleep 2
     # Open the default browser to the WordPress site and phpMyAdmin
+	open_link "https://${LEMP_SERVER_DOMAIN}"
     open_link "https://phpmyadmin.${LEMP_SERVER_DOMAIN}"
-    open_link "https://${LEMP_SERVER_DOMAIN}"
+
+	if [ -f "${LEMP_PATH}/secrets/db_root_user.txt" ] && [ -f "${LEMP_PATH}/secrets/db_root_user_password.txt" ]; then
+	    DB_USER=$(cat "${LEMP_PATH}/secrets/db_root_user.txt")
+	    DB_PASS=$(cat "${LEMP_PATH}/secrets/db_root_user_password.txt")
+	    show_popup "NEW LEMP STACK: ${STACK_NAME_UC}" "Copy and paste the user and password to log into phpMyAdmin with the following credentials\n\nUser: $DB_USER\nPassword: $DB_PASS"
+fi
 }
-export -f lemp_started_message
+
 
 
 lemp_host_file_trusted_cert_message(){
@@ -274,7 +281,7 @@ lemp_host_file_trusted_cert_message(){
     os_type=$(detect_os 2>/dev/null)
     hosts_file=$(detect_os_hosts_file 2>/dev/null)
     : "${hosts_file:=/etc/hosts}"
-    
+
     # Extra hint for WSL (Linux kernel but Windows host)
     is_wsl=false
     if [ "$os_type" = "linux" ] && [ -r /proc/version ]; then
@@ -282,10 +289,10 @@ lemp_host_file_trusted_cert_message(){
             *Microsoft*|*microsoft*) is_wsl=true ;;
         esac
     fi
-    
+
     case "$os_type" in
         macos)
-            warning_msg "ATTENTION: macOS users — You may need to trust the new ${LEMP_SERVER_DOMAIN} certificate in Keychain Access (KeychainAccess.app) the first time."
+            warning_msg "ATTENTION: macOS users — if your browser is not showing you phpMyAdmin login or the php info on the main domain the You may need to trust the new ${LEMP_SERVER_DOMAIN} certificate in Keychain Access (KeychainAccess.app) the first time."
             warning_msg "Also, double-check these domains were added to your ${hosts_file} file."
         ;;
         linux)
@@ -315,4 +322,4 @@ lemp_host_file_trusted_cert_message(){
         ;;
     esac
 }
-export -f lemp_host_file_trusted_cert_message
+

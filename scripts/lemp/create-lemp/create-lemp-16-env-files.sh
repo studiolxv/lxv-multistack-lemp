@@ -1,6 +1,6 @@
 #!/bin/sh
-. "$PROJECT_PATH/_environment.sh"
-file_msg "$(basename "$0")"
+. "$PROJECT_PATH/_env-setup.sh"
+# debug_file_msg "$(current_basename)"
 
 #
 # CREATE LEMP/.ENV FILE
@@ -15,7 +15,7 @@ else
     generating_msg "Generating .env with dynamic variables..."
     line_break
     TIMESTAMP=$(env TZ="$OS_TZ" date +"%Y-%m-%d_%I%M%S_%p_%Z")
-    
+
     # Generate .env file for Docker (without export)
 	cat <<EOL >"$LEMP_ENV_FILE"
 # ENVIRONMENT VARIABLES
@@ -80,6 +80,7 @@ PHPMYADMIN_IMAGE="${PHPMYADMIN_IMAGE}"
 PHPMYADMIN_DIR="${PHPMYADMIN_DIR}"
 PHPMYADMIN_PATH="${PHPMYADMIN_PATH}"
 PHPMYADMIN_FILE_CONF="${PHPMYADMIN_FILE_CONF}"
+PHPMYADMIN_SUBDOMAIN="${PHPMYADMIN_SUBDOMAIN}"
 #
 # NGINX
 NGINX_DIR="${NGINX_DIR}"
@@ -108,6 +109,7 @@ BACKUPS_DIR="${BACKUPS_DIR}"
 BACKUPS_PATH="${BACKUPS_PATH}"
 BACKUPS_SCRIPTS_DIR="${BACKUPS_SCRIPTS_DIR}"
 BACKUPS_SCRIPTS_PATH="${BACKUPS_SCRIPTS_PATH}"
+BACKUPS_CRON_DIR="${BACKUPS_CRON_DIR}"
 BACKUPS_CRONTAB_FILE="${BACKUPS_CRONTAB_FILE}"
 BACKUPS_CRON_SCHEDULE_DESC="${BACKUPS_CRON_SCHEDULE_DESC}"
 BACKUPS_CRON_SCHEDULE="${BACKUPS_CRON_SCHEDULE}"
@@ -132,10 +134,14 @@ LOG_PATH="${LOG_PATH}"
 LOG_CONTAINER_PATH="${LOG_CONTAINER_PATH}"
 #
 # DEFAULT IMAGES
+DEFAULT_DB_IMAGE="${DEFAULT_DB_IMAGE}"
+DEFAULT_PHP_IMAGE="${DEFAULT_PHP_IMAGE}"
+DEFAULT_PMA_IMAGE="${DEFAULT_PMA_IMAGE}"
 DEFAULT_WP_IMAGE="${DEFAULT_WP_IMAGE}"
+DEFAULT_BACKUPS_IMAGE="${DEFAULT_BACKUPS_IMAGE}"
 
 EOL
-    
+
     # Generate lemp-env.sh file to export all variables into docker containers and into cron jobs
     EXPORT_ENV_FILE="${BACKUPS_SCRIPTS_PATH}/lemp-env.sh"
 	cat <<EOL >"$EXPORT_ENV_FILE"
@@ -191,7 +197,6 @@ export DB_CONF_FILE="${DB_CONF_FILE}"
 export DB_CONTAINER_CONF_PATH="${DB_CONTAINER_CONF_PATH}"
 export DB_CONTAINER_DATA_PATH="${DB_CONTAINER_DATA_PATH}"
 export WORDPRESS_DB_HOST="${DB_HOST_NAME}" # Match docker compose "db" service container name
-
 #
 # PHP
 export PHP_CONTAINER_NAME="${PHP_CONTAINER_NAME}"
@@ -233,6 +238,7 @@ export BACKUPS_DIR="${BACKUPS_DIR}"
 export BACKUPS_PATH="${BACKUPS_PATH}"
 export BACKUPS_SCRIPTS_DIR="${BACKUPS_SCRIPTS_DIR}"
 export BACKUPS_SCRIPTS_PATH="${BACKUPS_SCRIPTS_PATH}"
+export BACKUPS_CRON_DIR="${BACKUPS_CRON_DIR}"
 export BACKUPS_CRONTAB_FILE="${BACKUPS_CRONTAB_FILE}"
 export BACKUPS_CRON_SCHEDULE_DESC="${BACKUPS_CRON_SCHEDULE_DESC}"
 export BACKUPS_CRON_SCHEDULE="${BACKUPS_CRON_SCHEDULE}"
@@ -362,10 +368,10 @@ export MYSQL_PWD="\$MYSQL_ROOT_PASSWORD"
 backup_log "📄 Exported Variables \$(basename "\$0") >>>"
 
 EOL
-    
+
     # Make export-env.sh executable
     chmod +x "$EXPORT_ENV_FILE"
-    
+
     if [ -f "$LEMP_ENV_FILE" ] && [ -f "$EXPORT_ENV_FILE" ]; then
         success_msg "${LEMP_DIR}/.env and ${LEMP_DIR}/scripts/lemp-env.sh files created successfully"
     else

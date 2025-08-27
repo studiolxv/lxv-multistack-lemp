@@ -1,6 +1,6 @@
 #!/bin/sh
-. "$PROJECT_PATH/_environment.sh"
-file_msg "$(basename "$0")"
+. "$PROJECT_PATH/_env-setup.sh"
+# debug_file_msg "$(current_basename)"
 
 #####################################################
 # SECRETS: WP CONTAINER SECRETS
@@ -102,7 +102,7 @@ if [ -f "${WORDPRESS_SECRETS_PATH}/wp_db_user_password.txt" ]; then
 else
 
 	# Write Variable to new file
-	echo "$WORDPRESS_DB_USER_PASSWORD" >"${WORDPRESS_SECRETS_PATH}/wp_db_user_password.txt"
+	echo "$WORDPRESS_DB_PASSWORD" >"${WORDPRESS_SECRETS_PATH}/wp_db_user_password.txt"
 
 	if [ -f "${WORDPRESS_SECRETS_PATH}/wp_db_user_password.txt" ]; then
 		status_msg "✨ ${C_Reset}'${WORDPRESS_SUBDOMAIN_NAME}/secrets/wp_db_user_password.txt' ${C_Green}created successfully."
@@ -208,6 +208,8 @@ cp "${LEMP_SECRETS_PATH}/db_root_user_password.txt" "${WORDPRESS_SECRETS_PATH}/d
 # /secrets/wp_admin_user_email.txt
 # /secrets/wp_admin_user.txt
 # /secrets/wp_admin_user_password.txt
+
+
 
 #####################################################
 # CREATE LEMP STACK - WORDPRESS CONTAINER

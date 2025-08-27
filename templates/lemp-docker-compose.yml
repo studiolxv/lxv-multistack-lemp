@@ -32,7 +32,7 @@ services:
   phpmyadmin:
     image: phpmyadmin:latest
     platform: ${OS_DOCKER_IMAGE_PLATFORM:-linux/amd64}
-    container_name: ${LEMP_SERVER_DOMAIN_NAME}-phpmyadmin
+    container_name: ${PHPMYADMIN_CONTAINER_NAME}
     hostname: phpmyadmin.${LEMP_SERVER_DOMAIN}
     restart: always
     env_file:
@@ -41,11 +41,17 @@ services:
       TZ: ${OS_TZ}
       PMA_HOST: ${DB_HOST_NAME}
       PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_user_password
       SERVER_NAME: phpmyadmin.${LEMP_SERVER_DOMAIN}
+      PMA_THEME: boodark-teal
     volumes:
       - ./.env:/etc/environment:ro
       # - ./${PHPMYADMIN_DIR}/phpmyadmin.conf:/etc/apache2/conf-available/phpmyadmin.conf
       - "./${LOG_DIR}:${LOG_CONTAINER_PATH}"
+      - "${ASSETS_PHPMYADMIN_THEMES_PATH}/blueberry:/var/www/html/themes/blueberry:ro"
+      - "${ASSETS_PHPMYADMIN_THEMES_PATH}/boodark-teal:/var/www/html/themes/boodark-teal:ro"
+      - "${ASSETS_PHPMYADMIN_THEMES_PATH}/darkwolf:/var/www/html/themes/darkwolf:ro"
+      - "./${PHPMYADMIN_DIR}/config.user.inc.php:/etc/phpmyadmin/config.user.inc.php:ro"
     networks:
       - ${LEMP_NETWORK_NAME}
       - traefik_network
@@ -104,7 +110,7 @@ services:
       - "./${BACKUPS_SCRIPTS_DIR}:/${BACKUPS_CONTAINER_NAME}/scripts"
       - "./${DB_DIR}/backups:/${BACKUPS_CONTAINER_NAME}/backups"
       - "./${LOG_DIR}:${LOG_CONTAINER_PATH}"
-      - "./${DB_DIR}/cron:/etc/cron.d"
+      - "./${BACKUPS_CRON_DIR}:/etc/cron.d"
     environment:
       TZ: ${OS_TZ}
       COLORTERM: truecolor

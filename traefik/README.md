@@ -5,6 +5,6 @@ traefik/docker-compose.yml
 This ensures that Traefik dynamically loads routing rules from the dynamic/ directory.
 
 traefik/dynamic/example-one.yml
-- One file per LEMP stack server (LEMP_DOMAIN_NAME.yml)
+- One file per LEMP stack server (LEMP-SERVER-DOMAIN.yml)
 - Each LEMP stack will have its own config file inside 'traefik/dynamic'
 - This file routes requests to Nginx & phpMyAdmin inside example-one.test.

@@ -1,6 +1,6 @@
 #!/bin/sh
-. "./_environment.sh"
-file_msg "$(basename "$0")"
+. "./_env-setup.sh"
+# debug_file_msg "$(current_basename)"
 
 #####################################################
 # SOURCE LEMP STACK .ENV
@@ -28,11 +28,11 @@ line_break
 
 # Back to the WordPress container directory
 changed_to_dir_msg "${LEMP_DIR}/containers/${WORDPRESS_DIR}"
-cd "$WORDPRESS_PATH"
+cd "$WORDPRESS_LEMP_CONTAINER_PATH"
 
 
 # Start up new Wordpress Container
-running_msg "% docker-compose -f \"${WORDPRESS_PATH}/docker-compose.yml\" up -d"
+running_msg "% docker-compose -f \"${WORDPRESS_LEMP_CONTAINER_PATH}/docker-compose.yml\" up -d"
 
 docker-compose -f "${WORDPRESS_DOCKER_COMPOSE_YML}" up -d
 
@@ -47,4 +47,4 @@ line_break
 
 #####################################################
 # CREATE LEMP STACK - WORDPRESS CONTAINER
-sh ${SCRIPTS_PATH}/lemp/wordpress/create-wordpress-16-complete.sh
+sh ${SCRIPTS_PATH}/lemp/wordpress/create-wordpress-16-update-wordpress.sh

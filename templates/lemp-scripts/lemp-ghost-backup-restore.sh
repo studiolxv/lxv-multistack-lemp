@@ -1,9 +1,9 @@
 #!/bin/sh
 # Ensure environment variables are loaded
 set -a # Auto-export all variables
-. /etc/environment
-. "/${BACKUPS_CONTAINER_NAME}/.env"
-. "/${BACKUPS_CONTAINER_NAME}/scripts/lemp-env.sh"
+[ -f /etc/environment ] && . /etc/environment
+[ -f "/${BACKUPS_CONTAINER_NAME}/.env" ] && . "/${BACKUPS_CONTAINER_NAME}/.env"
+[ -f "/${BACKUPS_CONTAINER_NAME}/scripts/lemp-env.sh" ] && . "/${BACKUPS_CONTAINER_NAME}/scripts/lemp-env.sh"
 set +a # Disable auto-export
 
 # To run this script, you need to be in the same directory as the script

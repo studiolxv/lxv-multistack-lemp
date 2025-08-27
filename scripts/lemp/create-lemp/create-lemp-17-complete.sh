@@ -1,8 +1,8 @@
 #!/bin/sh
 # create-lemp-17-complete.sh — bring the stack up and finish DB init
 # Load env and helpers
-. "${PROJECT_PATH}/_environment.sh"
-file_msg "$(basename "$0")"
+. "${PROJECT_PATH}/_env-setup.sh"
+# debug_file_msg "$(current_basename)"
 
 #####################################################
 # START LEMP CONTAINER
@@ -109,6 +109,32 @@ if ! wait_for_container_ready "$DB_HOST_NAME" 180 2; then
     warning_msg "${C_Yellow}Timed out waiting for '$DB_HOST_NAME' to be healthy.${C_Reset} Proceeding anyway."
 fi
 
+if ! wait_for_container_ready "$PHPMYADMIN_CONTAINER_NAME" 180 2; then
+    warning_msg "${C_Yellow}Timed out waiting for '$PHPMYADMIN_CONTAINER_NAME' to be healthy.${C_Reset} Proceeding anyway."
+fi
+sleep 2
+PMA_USER="pma"
+PMA_DB="phpmyadmin"
+PMA_PASS="strong-pma-password"
+
+# Create DB + user + grants by piping SQL from host into mysql inside the DB container
+cat <<SQL | docker exec -i "${DB_HOST_NAME}" sh -lc "mysql -uroot -p'${MYSQL_ROOT_PASSWORD}' -h127.0.0.1"
+CREATE DATABASE IF NOT EXISTS \`${PMA_DB}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS '${PMA_USER}'@'%' IDENTIFIED BY '${PMA_PASS}';
+GRANT ALL PRIVILEGES ON \`${PMA_DB}\`.* TO '${PMA_USER}'@'%';
+FLUSH PRIVILEGES;
+SQL
+
+# Load phpMyAdmin’s configuration storage schema:
+# stream the SQL file out of the phpMyAdmin container and pipe it into mysql in the DB container
+if docker exec "${PHPMYADMIN_CONTAINER_NAME}" test -f /var/www/html/sql/create_tables.sql; then
+  docker exec "${PHPMYADMIN_CONTAINER_NAME}" cat /var/www/html/sql/create_tables.sql \
+    | docker exec -i "${DB_HOST_NAME}" sh -lc "mysql -uroot -p'${MYSQL_ROOT_PASSWORD}' -h127.0.0.1 '${PMA_DB}'" || \
+    warning_msg "Failed to import phpMyAdmin schema into '${PMA_DB}'."
+else
+  warning_msg "phpMyAdmin schema file not found in container '${PHPMYADMIN_CONTAINER_NAME}'. Skipping import."
+fi
+
 #####################################################
 # LEMP: SUCCESS MESSAGE
 
@@ -120,5 +146,4 @@ lemp_host_file_trusted_cert_message
 
 line_break
 
-cd ${PROJECT_PATH} || exit
-sh "${SCRIPTS_PATH}/multistack/manage-multistack.sh"
+sh "${SCRIPTS_PATH}/multistack/manage-multistack.sh" "${NEW_STACK_NAME}"

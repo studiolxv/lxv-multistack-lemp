@@ -191,7 +191,7 @@ https://domain-two.test
 
 ```
 lxv-multistack-lemp
-├── _environment.sh
+├── _env-setup.sh
 ├── functions
 ├── scripts
 ├── stacks

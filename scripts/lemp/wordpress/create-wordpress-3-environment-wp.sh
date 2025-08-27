@@ -1,6 +1,6 @@
 #!/bin/sh
-. "$PROJECT_PATH/_environment.sh"
-file_msg "$(basename "$0")"
+. "$PROJECT_PATH/_env-setup.sh"
+# debug_file_msg "$(current_basename)"
 
 #####################################################
 # SOURCE LEMP STACK .ENV
@@ -28,12 +28,16 @@ export DB_HOST_NAME="${DB_HOST_NAME}"
 export WORDPRESS_SUBDOMAIN="${WORDPRESS_SUBDOMAIN_NAME}.${LEMP_SERVER_DOMAIN}"
 
 #####################################################
+# WORDPRESS: CONTAINER PATH ON HOST MACHINE
+export WORDPRESS_LEMP_CONTAINER_PATH="${LEMP_CONTAINERS_PATH}/${WORDPRESS_SUBDOMAIN_NAME}"
+
+#####################################################
 # WORDPRESS: CONTAINER
 export WORDPRESS_DIR="${WORDPRESS_SUBDOMAIN_NAME}"
-export WORDPRESS_PATH="${LEMP_CONTAINERS_PATH}/${WORDPRESS_SUBDOMAIN_NAME}"
-export WORDPRESS_CONTAINER_PATH="${LEMP_CONTAINERS_PATH}/${WORDPRESS_SUBDOMAIN_NAME}"
+export WORDPRESS_CONTAINER_PATH="/var/www/html"
 export WORDPRESS_CONTAINER_NAME="${LEMP_CONTAINER_NAME}_${WORDPRESS_SUBDOMAIN_NAME}_wordpress"
 export WORDPRESS_SERVICE_CONTAINER_NAME="${LEMP_SERVER_DOMAIN_NAME}-${WORDPRESS_SUBDOMAIN_NAME}-wordpress"
+export WORDPRESS_DB_HOST="${DB_HOST_NAME}:3306"
 # export WORDPRESS_SERVICE_CONTAINER_NAME="${LEMP_SERVER_DOMAIN_NAME}-wordpress-${WORDPRESS_SUBDOMAIN_NAME}"
 # Matches for Traefik's subdomain matching api ie 'wordpress-{subdomain}
 # export WORDPRESS_SERVICE_CONTAINER_NAME="wordpress-${WORDPRESS_SUBDOMAIN_NAME}"
@@ -43,11 +47,11 @@ export WORDPRESS_SERVICE_CONTAINER_NAME="${LEMP_SERVER_DOMAIN_NAME}-${WORDPRESS_
 export WORDPRESS_TRAEFIK_CONFIG_YML_FILE="${TRAEFIK_DYNAMIC_PATH}/lemp-${LEMP_SERVER_DOMAIN_NAME}-${WORDPRESS_SUBDOMAIN_NAME}.yml"
 
 #####################################################
-# WORDPRESS: DIRECTORIES
+# WORDPRESS: HOST MACHINE DIRECTORIES
 export WORDPRESS_PUBLIC_DIR="${PHP_PUBLIC_DIR}"
-export WORDPRESS_PUBLIC_PATH="${WORDPRESS_PATH}/${WORDPRESS_PUBLIC_DIR}"
+export WORDPRESS_PUBLIC_PATH="${WORDPRESS_LEMP_CONTAINER_PATH}/${WORDPRESS_PUBLIC_DIR}"
 export WORDPRESS_SECRETS_DIR="secrets"
-export WORDPRESS_SECRETS_PATH="${WORDPRESS_PATH}/${WORDPRESS_SECRETS_DIR}"
+export WORDPRESS_SECRETS_PATH="${WORDPRESS_LEMP_CONTAINER_PATH}/${WORDPRESS_SECRETS_DIR}"
 # Define the path to WordPress inside the container
 
 #####################################################
@@ -63,12 +67,12 @@ export WORDPRESS_NGINX_CONF_FILE="${WORDPRESS_NGINX_CONF_PATH}/default.conf"
 
 #####################################################
 # WORDPRESS: DOCKER COMPOSE
-export WORDPRESS_DOCKER_COMPOSE_YML="${WORDPRESS_PATH}/docker-compose.yml"
+export WORDPRESS_DOCKER_COMPOSE_YML="${WORDPRESS_LEMP_CONTAINER_PATH}/docker-compose.yml"
 
 #####################################################
 # WORDPRESS: ENV FILE
 # Write the evaluated variables to the .env file for container
-export WORDPRESS_ENV_FILE="$WORDPRESS_PATH/.env"
+export WORDPRESS_ENV_FILE="$WORDPRESS_LEMP_CONTAINER_PATH/.env"
 
 line_break
 

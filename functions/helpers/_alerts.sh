@@ -13,4 +13,4 @@ send_alert() {
 	# Send Discord/Webhook Notification (Optional)
 	# curl -X POST -H "Content-Type: application/json" -d '{"content": "'"${MESSAGE}"'"}' "YOUR_DISCORD_WEBHOOK_URL"
 }
-export -f send_alert
+

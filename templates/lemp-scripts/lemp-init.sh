@@ -1,9 +1,9 @@
 #!/bin/sh
 # Ensure environment variables are loaded
 set -a # Auto-export all variables
-. /etc/environment
-. "/${BACKUPS_CONTAINER_NAME}/.env"
-. "/${BACKUPS_CONTAINER_NAME}/scripts/lemp-env.sh"
+[ -f /etc/environment ] && . /etc/environment
+[ -f "/${BACKUPS_CONTAINER_NAME}/.env" ] && . "/${BACKUPS_CONTAINER_NAME}/.env"
+[ -f "/${BACKUPS_CONTAINER_NAME}/scripts/lemp-env.sh" ] && . "/${BACKUPS_CONTAINER_NAME}/scripts/lemp-env.sh"
 set +a # Disable auto-export
 
 # Make sure logs can write before first backup_log
@@ -39,8 +39,8 @@ start_cron_daemon() {
     fi
 }
 
-BACKUPS_CONTAINER_NAME_UPPER="$(printf '%s' "${BACKUPS_CONTAINER_NAME}" | tr '[:lower:]' '[:upper:]')"
-backup_heading "$BACKUPS_CONTAINER_NAME_UPPER INIT"
+BACKUPS_CONTAINER_NAME_UC="$(uc_word "$BACKUPS_CONTAINER_NAME")"
+backup_heading "$BACKUPS_CONTAINER_NAME_UC INIT"
 backup_log "📄 Running $(basename "$0") >>>"
 
 # Wait for MySQL to be ready

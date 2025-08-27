@@ -1,6 +1,6 @@
 #!/bin/sh
-. "$PROJECT_PATH/_environment.sh"
-file_msg "$(basename "$0")"
+. "$PROJECT_PATH/_env-setup.sh"
+# debug_file_msg "$(current_basename)"
 #####################################################
 # DATABASE: SECRETS
 line_break
@@ -82,4 +82,4 @@ line_break
 
 #####################################################
 # CREATE LEMP STACK
-sh "${SCRIPTS_PATH}/lemp/create-lemp/create-lemp-9-directory-nginx.sh"
+. "${SCRIPTS_PATH}/lemp/create-lemp/create-lemp-9-directory-nginx.sh"

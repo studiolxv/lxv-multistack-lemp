@@ -1,53 +1,67 @@
 #!/bin/sh
 # Ensure environment variables are loaded
 set -a # Auto-export all variables
-: "${BACKUPS_CONTAINER_NAME:=latest-backups}"
-. /etc/environment
-. "/${BACKUPS_CONTAINER_NAME}/.env"
-. "/${BACKUPS_CONTAINER_NAME}/scripts/lemp-env.sh"
+[ -f /etc/environment ] && . /etc/environment
+[ -f "/${BACKUPS_CONTAINER_NAME}/.env" ] && . "/${BACKUPS_CONTAINER_NAME}/.env"
+[ -f "/${BACKUPS_CONTAINER_NAME}/scripts/lemp-env.sh" ] && . "/${BACKUPS_CONTAINER_NAME}/scripts/lemp-env.sh"
 set +a # Disable auto-export
 
 # --- Auto-discover DB hosts from current env and .env (no manual config) ----
+# --- Auto-discover DB hosts from current env and .env (no manual config) ----
 if [ -z "${BACKUP_MULTI_HOST_DONE:-}" ]; then
-    CANDS="db"
-    # From current environment
-    ENV_HOSTS=$(env | awk -F= '/(_DB_HOST|MYSQL_HOST|WORDPRESS_DB_HOST|WP_DB_HOST)/ {print $2}')
-    CANDS="$CANDS $ENV_HOSTS"
-    # From container .env file
+    # Collect candidates (newline-separated), strip inline comments and quotes
+    ENV_HOSTS=$(
+        env | awk -F= '/(_DB_HOST|MYSQL_HOST|WORDPRESS_DB_HOST|WP_DB_HOST)/ {print $2}' \
+        | sed 's/#.*$//' | tr -d "\"'" | awk 'NF'
+    )
+
+    FILE_HOSTS=""
     if [ -f "/${BACKUPS_CONTAINER_NAME}/.env" ]; then
-        FILE_HOSTS=$(awk -F= '/(_DB_HOST|MYSQL_HOST|WORDPRESS_DB_HOST|WP_DB_HOST)/ {gsub(/"|\047/,"",$2); print $2}' "/${BACKUPS_CONTAINER_NAME}/.env")
-        CANDS="$CANDS $FILE_HOSTS"
+        FILE_HOSTS=$(
+            awk -F= '/(_DB_HOST|MYSQL_HOST|WORDPRESS_DB_HOST|WP_DB_HOST)/ {gsub(/"|\047/,"",$2); sub(/#.*/,"",$2); gsub(/^[ \t]+|[ \t]+$/,"",$2); if(length($2)) print $2}' "/${BACKUPS_CONTAINER_NAME}/.env"
+        )
     fi
-    # Deduplicate and sanitize
-    HOSTS=""
-    for H in $CANDS; do
+
+    # Sanitize: keep only plausible host[:port] tokens; uniq
+    HOSTS=$(
+        printf '%s\n' "db" $ENV_HOSTS $FILE_HOSTS \
+        | sed 's/[[:space:]]\+$//' \
+        | awk 'NF && $1 !~ /^#/' \
+        | grep -E '^[A-Za-z0-9._-]+(:[0-9]+)?$' \
+        | sort -u
+    )
+
+    # Probe which hosts are reachable via mysql (build a newline list)
+    REACHABLE=""
+    OLDIFS=$IFS; IFS='
+'
+    for H in $HOSTS; do
         [ -z "$H" ] && continue
         case "$H" in localhost|127.0.0.1|::1) continue;; esac
-        case " $HOSTS " in *" $H "*) : ;; *) HOSTS="$HOSTS $H";; esac
-    done
-    # Probe which hosts are reachable via mysql
-    REACHABLE=""
-    for H in $HOSTS; do
         TEST_SQL_OPTS="-h \"$H\" -u root --protocol=TCP --connect-timeout=3"
-        if [ -n "${MYSQL_ROOT_PASSWORD:-}" ]; then
-            TEST_SQL_OPTS="$TEST_SQL_OPTS -p\"$MYSQL_ROOT_PASSWORD\""
-        fi
+        [ -n "${MYSQL_ROOT_PASSWORD:-}" ] && TEST_SQL_OPTS="$TEST_SQL_OPTS -p\"$MYSQL_ROOT_PASSWORD\""
         if eval mysql $TEST_SQL_OPTS -e "SELECT 1;" >/dev/null 2>&1; then
-            REACHABLE="$REACHABLE $H"
+            REACHABLE="${REACHABLE}${REACHABLE:+
+}$H"
         else
             backup_log "(${BACKUP_TYPE}) ⚠️ Skipping unreachable DB host: $H"
         fi
     done
-    COUNT=$(printf "%s\n" $REACHABLE | awk 'NF' | wc -l | tr -d ' ')
+    IFS=$OLDIFS
+
+    COUNT=$(printf '%s\n' "$REACHABLE" | awk 'NF' | wc -l | tr -d ' ')
     if [ "${COUNT:-0}" -gt 1 ]; then
-        backup_log "(${BACKUP_TYPE}) 🌐 Auto-discovered DB hosts: $REACHABLE"
+        backup_log "(${BACKUP_TYPE}) 🌐 Auto-discovered DB hosts: $(printf '%s' \"$REACHABLE\" | tr '\n' ' ')"
+        IFS='
+'
         for H in $REACHABLE; do
             backup_heading "📡 Auto-backup host: $H"
-            BACKUP_MULTI_HOST_DONE=1 MYSQL_HOST="$H" sh "$0" "$BACKUP_TYPE"
+            BACKUP_MULTI_HOST_DONE=1 MYSQL_HOST="$H" . "$0" "$BACKUP_TYPE"
         done
+        IFS="$OLDIFS"
         exit 0
     elif [ "${COUNT:-0}" -eq 1 ] && [ -z "${MYSQL_HOST:-}" ]; then
-        MYSQL_HOST=$(printf "%s\n" $REACHABLE | awk 'NF{print; exit}')
+        MYSQL_HOST=$(printf '%s\n' "$REACHABLE" | awk 'NF{print; exit}')
     fi
 fi
 
@@ -82,8 +96,8 @@ LOCAL_TIME=$(get_local_time)
 TODAY_DIR=$(get_today_dir)
 
 # Log
-BACKUP_TYPE_UPPER=$(printf '%s' "${BACKUP_TYPE}" | tr '[:lower:]' '[:upper:]')
-backup_heading "⤵️ ${BACKUP_TYPE_UPPER} BACKUP"
+BACKUP_TYPE_UC="$(uc_word "$BACKUP_TYPE")"
+backup_heading "⤵️ ${BACKUP_TYPE_UC} BACKUP"
 backup_log "📄 Running $(basename "$0") >>>"
 
 # Starting Message

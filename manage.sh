@@ -1,17 +1,11 @@
 #!/bin/sh
-#####################################################
-# SET DEBUG MODE
-export debug_multistack=false
-export debug_file_sourcing=false
-
-# Get the current directory
 export PROJECT_PATH=$(cd -- "$(dirname -- "$(realpath "$0" 2>/dev/null || readlink -f "$0")")" && pwd)
-
-# Initialize the LEMP management system environment variables and functions
-. "$PROJECT_PATH/_environment.sh"
-file_msg "$(basename "$0")"
-
-make_scripts_executable
+export PROJECT_NAME="$(basename "$PROJECT_PATH")"
+export PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
+export PROJECT_ENV_FILE="${PROJECT_ROOT}/.env"
+. "${PROJECT_ENV_FILE}"
+wait
+# debug_file_msg "$(current_basename)"
 
 # sh "${SCRIPTS_PATH}/docker/setup-docker.sh"
 # wait

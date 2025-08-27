@@ -1,6 +1,6 @@
 #!/bin/sh
-. "$PROJECT_PATH/_environment.sh"
-file_msg "$(basename "$0")"
+. "$PROJECT_PATH/_env-setup.sh"
+# debug_file_msg "$(current_basename)"
 
 #####################################################
 # INITIALIZE WORDPRESS DATABASE
@@ -37,8 +37,8 @@ if [ -z "$WORDPRESS_DB_USER" ]; then
 	exit 1
 fi
 
-if [ -z "$WORDPRESS_DB_USER_PASSWORD" ]; then
-	error_msg "WORDPRESS_DB_USER_PASSWORD is not set. Please set it in your environment."
+if [ -z "$WORDPRESS_DB_PASSWORD" ]; then
+	error_msg "WORDPRESS_DB_PASSWORD is not set. Please set it in your environment."
 	exit 1
 fi
 

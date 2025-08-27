@@ -48,7 +48,7 @@ detect_os() {
 		;;
 	esac
 }
-export -f detect_os
+
 
 detect_os_name() {
 	OS_ID=$(detect_os) # Get OS type
@@ -80,7 +80,7 @@ detect_os_name() {
 		;;
 	esac
 }
-export -f detect_os_name
+
 
 #####################################################
 # OPERATING SYSTEM HOST FILE
@@ -102,7 +102,7 @@ detect_os_hosts_file() {
 		;;
 	esac
 }
-export -f detect_os_hosts_file
+
 
 get_local_loopback_ip() {
 	# Always emit a value; default to 127.0.0.1
@@ -135,7 +135,7 @@ get_local_loopback_ip() {
 
 	[ -n "$ip" ] && printf '%s\n' "$ip" || printf '%s\n' "$default"
 }
-export -f get_local_loopback_ip
+
 
 is_hosts_file_mods_needed() {
 	loopback=${1:-${HOSTS_FILE_LOOPBACK_IP}}
@@ -153,7 +153,7 @@ is_hosts_file_mods_needed() {
 		return 1
 	fi
 }
-export -f is_hosts_file_mods_needed
+
 
 append_to_hosts_file_manually_msg() {
 
@@ -161,7 +161,7 @@ append_to_hosts_file_manually_msg() {
 	example_msg "${C_Yellow}${HOSTS_FILE_LOOPBACK_IP} ${LEMP_SERVER_DOMAIN}"
 	example_msg "${C_Yellow}${HOSTS_FILE_LOOPBACK_IP} phpmyadmin.${LEMP_SERVER_DOMAIN}"
 }
-export -f append_to_hosts_file_manually_msg
+
 
 append_to_hosts_file() {
 
@@ -251,4 +251,4 @@ append_to_hosts_file() {
 	fi
 	return
 }
-export -f append_to_hosts_file
+

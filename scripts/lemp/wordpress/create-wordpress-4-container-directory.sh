@@ -1,6 +1,6 @@
 #!/bin/sh
-. "$PROJECT_PATH/_environment.sh"
-file_msg "$(basename "$0")"
+. "$PROJECT_PATH/_env-setup.sh"
+# debug_file_msg "$(current_basename)"
 
 #####################################################
 # SOURCE LEMP STACK .ENV
@@ -19,8 +19,8 @@ source_lemp_stack_env ${STACK_NAME}
 # NEW DIRECTORIES
 
 # Create WordPress container directory
-mkdir -p "${WORDPRESS_PATH}"
-chmod -R 755 "${WORDPRESS_PATH}"
+mkdir -p "${WORDPRESS_LEMP_CONTAINER_PATH}"
+chmod -R 755 "${WORDPRESS_LEMP_CONTAINER_PATH}"
 
 mkdir -p "${WORDPRESS_PUBLIC_PATH}"
 chmod -R 755 "${WORDPRESS_PUBLIC_PATH}"
@@ -31,11 +31,11 @@ chmod -R 755 "${WORDPRESS_SECRETS_PATH}"
 #####################################################
 # COPY WORDPRESS DOCKER FILE TEMPLATE
 # Builds wordpress-latest with SoapClient
-cp "${PROJECT_PATH}/templates/wordpress-Dockerfile" "$WORDPRESS_PATH/Dockerfile"
+cp "${PROJECT_PATH}/templates/wordpress-Dockerfile" "$WORDPRESS_LEMP_CONTAINER_PATH/Dockerfile"
 
 # Replace variables in the Dockerfile
 REPLACE_WP_IMAGE="${DEFAULT_WP_IMAGE:-wordpress:latest}"
-search_file_replace "$WORDPRESS_PATH/Dockerfile" "<<REPLACE_WP_IMAGE>>" "${REPLACE_WP_IMAGE}"
+search_file_replace "$WORDPRESS_LEMP_CONTAINER_PATH/Dockerfile" "<<REPLACE_WP_IMAGE>>" "${REPLACE_WP_IMAGE}"
 
 export WORDPRESS_IMAGE="${REPLACE_WP_IMAGE}"
 

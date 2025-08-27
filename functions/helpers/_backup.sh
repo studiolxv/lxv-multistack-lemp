@@ -35,7 +35,7 @@ dump_container_db() {
 	fi
 
 }
-export -f dump_container_db
+
 
 # Call the function with an optional argument for database name
 # Example usage: backup_database "specific_database_name"
@@ -91,4 +91,4 @@ backup_database() {
 	done
 }
 
-export -f backup_database
+

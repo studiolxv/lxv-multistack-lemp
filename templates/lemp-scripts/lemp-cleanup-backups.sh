@@ -4,9 +4,9 @@
 
 # --- Load env ---------------------------------------------------------------
 set -a
-. /etc/environment
-. "/${BACKUPS_CONTAINER_NAME}/.env"
-. "/${BACKUPS_CONTAINER_NAME}/scripts/lemp-env.sh"
+[ -f /etc/environment ] && . /etc/environment
+[ -f "/${BACKUPS_CONTAINER_NAME}/.env" ] && . "/${BACKUPS_CONTAINER_NAME}/.env"
+[ -f "/${BACKUPS_CONTAINER_NAME}/scripts/lemp-env.sh" ] && . "/${BACKUPS_CONTAINER_NAME}/scripts/lemp-env.sh"
 set +a
 
 backup_heading "🧼 CLEANUP SQL BACKUPS"
@@ -23,14 +23,13 @@ fi
 BACKUPS_ROOT="$BACKUPS_CONTAINER_BACKUPS_PATH"
 DRY_RUN="${BACKUPS_CLEANUP_DRY_RUN:-0}"
 
-# Normalize DRY_RUN to accept 1/yes/true/on
+# Normalize DRY_RUN to accept 1/yes/true/on ----------------------------------
 is_dry_run() {
     case "$(printf '%s' "$DRY_RUN" | tr '[:upper:]' '[:lower:]')" in
         1|yes|true|on) return 0 ;;
         *) return 1 ;;
     esac
 }
-
 
 dry_run_status() { is_dry_run && printf 'ON' || printf 'OFF'; }
 
@@ -52,6 +51,16 @@ file_epoch() {
 
 day_key() { date -u -d "@${1}" +%Y-%m-%d; }
 month_key() { date -u -d "@${1}" +%Y-%m; }
+
+# Additional time-group keys for advanced policies
+hour_key() { date -u -d "@${1}" +%Y-%m-%dT%H; }
+# Week key anchored on Sunday (use the Sunday's date as the group label)
+week_key_sun() {
+    # %w => day of week, 0=Sunday..6=Saturday; subtract that many days to get Sunday
+    dow=$(date -u -d "@${1}" +%w)
+    date -u -d "@${1} -${dow} days" +%Y-%m-%d
+}
+year_key() { date -u -d "@${1}" +%Y; }
 
 # Keep-map helpers using temp files (works in POSIX sh)
 # map file content: "epoch|path"
@@ -100,11 +109,11 @@ os_trash() { # $1 = path
         trash-put)
         trash-put -- "$1" ;;
         gio)
-        gio trash "$1" ;;
+        gio tra. "$1" ;;
         gvfs-trash)
-        gvfs-trash "$1" ;;
+        gvfs-tra. "$1" ;;
         kioclient5)
-        kioclient5 moveToTrash "$1" ;;
+        kioclient5 moveToTra. "$1" ;;
         powershell)
             # Attempt to send to Recycle Bin via PowerShell .NET API
             powershell.exe -NoProfile -Command "\
@@ -130,7 +139,7 @@ rm_safe() {
         return 0
     fi
     if [ "$BACKUPS_USE_OS_TRASH" = "1" ] && [ -n "$TRASH_CMD" ]; then
-        os_trash "$1" 2>/dev/null || rm -f -- "$1"
+        os_tra. "$1" 2>/dev/null || rm -f -- "$1"
     else
         rm -f -- "$1"
     fi
@@ -159,16 +168,16 @@ fi
 for CONTAINER_DIR in "$BACKUPS_ROOT"/*; do
     [ -d "$CONTAINER_DIR" ] || continue
     CONTAINER_NAME=$(basename "$CONTAINER_DIR")
-    CONTAINER_NAME_UPPER=$(echo "$CONTAINER_NAME" | tr '[:lower:]' '[:upper:]')
-    backup_heading "(cleanup) $CONTAINER_NAME_UPPER BACKUP SQL"
-    
+    CONTAINER_NAME_UC="$(uc_word "$CONTAINER_NAME")"
+    backup_heading "(cleanup) $CONTAINER_NAME_UC BACKUP SQL"
+
     KEPT_DAYS=0
     KEPT_MONTHS=0
     DELETED=0
     STAGED=0
     SKIPPED_TODAY=0
-    
-    
+
+
     TMPDIR="$(mktemp -d)"
     # First pass: compute keepers (per-day within last 30d, per-month for >30d)
     find "$CONTAINER_DIR" -type f -name "*.sql" -print | \
@@ -176,13 +185,13 @@ for CONTAINER_DIR in "$BACKUPS_ROOT"/*; do
         EPOCH="$(file_epoch "$FILE")" || continue
         [ -n "$EPOCH" ] || continue
         AGE=$((NOW_EPOCH - EPOCH))
-        
+
         # Skip today's files to avoid fighting with in-progress backups
         if [ "$AGE" -lt "$DAY_SECS" ]; then
             SKIPPED_TODAY=$((SKIPPED_TODAY + 1))
             continue
         fi
-        
+
         if [ "$AGE" -lt "$DAYS30_SECS" ]; then
             K="day_$(day_key "$EPOCH")"
             keep_map_maybe_update "$TMPDIR" "$K" "$EPOCH" "$FILE"
@@ -191,7 +200,7 @@ for CONTAINER_DIR in "$BACKUPS_ROOT"/*; do
             keep_map_maybe_update "$TMPDIR" "$K" "$EPOCH" "$FILE"
         fi
     done
-    
+
     # Log keep decisions
     # Print a single heading and then list per-day keepers
     set -- "$TMPDIR"/day_*
@@ -220,12 +229,175 @@ for CONTAINER_DIR in "$BACKUPS_ROOT"/*; do
             backup_cleanup_file_log "(cleanup) 📂 [$GROUP] -> $(basename "$KEEP_PATH")"
         done
     fi
-    
+
     case "${BACKUPS_CLEANUP_ACTION:-}" in
+        gfs)
+            # Grandfather-Father-Son retention
+            # Keep: 48 hourly, 14 daily, 8 weekly (Sunday), 12 monthly, 3 yearly
+            HOURS48_SECS=$((48*3600))
+            DAYS14_SECS=$((14*DAY_SECS))
+            WEEKS8_SECS=$((8*7*DAY_SECS))
+            MONTHS12_SECS=$((365*24*3600/12*12)) # approx window guard; actual monthly grouping via keys
+            YEARS3_SECS=$((3*365*DAY_SECS))
+
+            # Build keep map with prefixes h_, d_, w_, m_, y_
+            find "$CONTAINER_DIR" -type f -name "*.sql" -print |
+            while IFS= read -r FILE; do
+                EPOCH="$(file_epoch "$FILE")" || continue
+                [ -n "$EPOCH" ] || continue
+                AGE=$((NOW_EPOCH - EPOCH))
+
+                # Skip today's files during keeper computation; they are auto-skipped from deletion later
+                [ "$AGE" -lt "$DAY_SECS" ] && continue
+
+                # Hourly (last 48h): newest per hour
+                if [ "$AGE" -le "$HOURS48_SECS" ]; then
+                    K="h_$(hour_key "$EPOCH")"
+                    keep_map_maybe_update "$TMPDIR" "$K" "$EPOCH" "$FILE"
+                fi
+                # Daily (last 14d): newest per day
+                if [ "$AGE" -le "$DAYS14_SECS" ]; then
+                    K="d_$(day_key "$EPOCH")"
+                    keep_map_maybe_update "$TMPDIR" "$K" "$EPOCH" "$FILE"
+                fi
+                # Weekly (last 8w): newest per Sunday
+                if [ "$AGE" -le "$WEEKS8_SECS" ]; then
+                    K="w_$(week_key_sun "$EPOCH")"
+                    keep_map_maybe_update "$TMPDIR" "$K" "$EPOCH" "$FILE"
+                fi
+                # Monthly (last 12m): newest per month
+                # We don't compute exact months by age; the month_key provides grouping
+                K="m_$(month_key "$EPOCH")"
+                keep_map_maybe_update "$TMPDIR" "$K" "$EPOCH" "$FILE"
+                # Yearly (last 3y): newest per year
+                K="y_$(year_key "$EPOCH")"
+                keep_map_maybe_update "$TMPDIR" "$K" "$EPOCH" "$FILE"
+            done
+
+            # Logs for each retention tier
+            set -- "$TMPDIR"/h_*
+            if [ -e "$1" ]; then
+                backup_log "(cleanup) ⏱ Keeping Latest per-hour (48h window)"
+                for KFILE in "$TMPDIR"/h_*; do [ -f "$KFILE" ] || continue; KP="$(cut -d'|' -f2 "$KFILE")"; backup_cleanup_file_log "(cleanup) ⏱ [$(basename "$KFILE")] -> $(basename "$KP")"; done
+            fi
+            set -- "$TMPDIR"/d_*
+            if [ -e "$1" ]; then
+                backup_log "(cleanup) 📅 Keeping Latest per-day (14d window)"
+                for KFILE in "$TMPDIR"/d_*; do [ -f "$KFILE" ] || continue; KP="$(cut -d'|' -f2 "$KFILE")"; backup_cleanup_file_log "(cleanup) 📅 [$(basename "$KFILE")] -> $(basename "$KP")"; done
+            fi
+            set -- "$TMPDIR"/w_*
+            if [ -e "$1" ]; then
+                backup_log "(cleanup) 🗓 Keeping Latest per-week (Sunday anchor, 8w window)"
+                for KFILE in "$TMPDIR"/w_*; do [ -f "$KFILE" ] || continue; KP="$(cut -d'|' -f2 "$KFILE")"; backup_cleanup_file_log "(cleanup) 🗓 [$(basename "$KFILE")] -> $(basename "$KP")"; done
+            fi
+            set -- "$TMPDIR"/m_*
+            if [ -e "$1" ]; then
+                backup_log "(cleanup) 🗃 Keeping Latest per-month (12m window)"
+                for KFILE in "$TMPDIR"/m_*; do [ -f "$KFILE" ] || continue; KP="$(cut -d'|' -f2 "$KFILE")"; backup_cleanup_file_log "(cleanup) 🗃 [$(basename "$KFILE")] -> $(basename "$KP")"; done
+            fi
+            set -- "$TMPDIR"/y_*
+            if [ -e "$1" ]; then
+                backup_log "(cleanup) 🗂 Keeping Latest per-year (3y window)"
+                for KFILE in "$TMPDIR"/y_*; do [ -f "$KFILE" ] || continue; KP="$(cut -d'|' -f2 "$KFILE")"; backup_cleanup_file_log "(cleanup) 🗂 [$(basename "$KFILE")] -> $(basename "$KP")"; done
+            fi
+
+            # Delete anything not in keep-set (excluding today's files)
+            find "$CONTAINER_DIR" -type f -name "*.sql" -print |
+            while IFS= read -r FILE; do
+                EPOCH="$(file_epoch "$FILE")" || continue
+                [ -n "$EPOCH" ] || continue
+                AGE=$((NOW_EPOCH - EPOCH))
+                [ "$AGE" -lt "$DAY_SECS" ] && continue
+
+                KEEPED=0
+                HK="h_$(hour_key "$EPOCH")"; DK="d_$(day_key "$EPOCH")"; WK="w_$(week_key_sun "$EPOCH")"; MK="m_$(month_key "$EPOCH")"; YK="y_$(year_key "$EPOCH")"
+                for KK in "$HK" "$DK" "$WK" "$MK" "$YK"; do
+                    KPATH="$(keep_map_get_path "$TMPDIR" "$KK")"
+                    if [ -n "$KPATH" ] && [ "$FILE" = "$KPATH" ]; then KEEPED=1; break; fi
+                done
+                if [ "$KEEPED" -eq 0 ]; then
+                    backup_cleanup_file_log "(cleanup) 🗑️ Deleting -> $(basename "$FILE")"
+                    rm_safe "$FILE"
+                    DELETED=$((DELETED + 1))
+                fi
+            done
+        ;;
+        rwma)
+            # Rolling Window + Monthly Anchors
+            # Keep: all <7d; 1/day for days 8–30; 1/week for weeks 5–12; 1/month for months 4–24
+            DAYS7_SECS=$((7*DAY_SECS))
+            DAYS30_SECS_LOCAL=$((30*DAY_SECS))
+            WEEKS12_SECS=$((12*7*DAY_SECS))
+            MONTHS24_SECS=$((24*30*DAY_SECS)) # approx 24 months window
+
+            # Build keep map with prefixes d_, w_, m_
+            find "$CONTAINER_DIR" -type f -name "*.sql" -print |
+            while IFS= read -r FILE; do
+                EPOCH="$(file_epoch "$FILE")" || continue
+                [ -n "$EPOCH" ] || continue
+                AGE=$((NOW_EPOCH - EPOCH))
+
+                # Keep all <7d by skipping from map (we'll skip deletion later)
+                [ "$AGE" -lt "$DAYS7_SECS" ] && continue
+
+                if [ "$AGE" -ge "$DAYS7_SECS" ] && [ "$AGE" -le "$DAYS30_SECS_LOCAL" ]; then
+                    # Days 8–30 → newest per day
+                    K="d_$(day_key "$EPOCH")"
+                    keep_map_maybe_update "$TMPDIR" "$K" "$EPOCH" "$FILE"
+                    elif [ "$AGE" -gt "$DAYS30_SECS_LOCAL" ] && [ "$AGE" -le "$WEEKS12_SECS" ]; then
+                    # Weeks 5–12 → newest per Sunday
+                    K="w_$(week_key_sun "$EPOCH")"
+                    keep_map_maybe_update "$TMPDIR" "$K" "$EPOCH" "$FILE"
+                    elif [ "$AGE" -gt "$WEEKS12_SECS" ] && [ "$AGE" -le "$MONTHS24_SECS" ]; then
+                    # Months 4–24 → newest per month
+                    K="m_$(month_key "$EPOCH")"
+                    keep_map_maybe_update "$TMPDIR" "$K" "$EPOCH" "$FILE"
+                fi
+            done
+
+            # Logs
+            set -- "$TMPDIR"/d_*
+            if [ -e "$1" ]; then
+                backup_log "(cleanup) 📅 Keeping Latest per-day (days 8–30)"
+                for KFILE in "$TMPDIR"/d_*; do [ -f "$KFILE" ] || continue; KP="$(cut -d'|' -f2 "$KFILE")"; backup_cleanup_file_log "(cleanup) 📅 [$(basename "$KFILE")] -> $(basename "$KP")"; done
+            fi
+            set -- "$TMPDIR"/w_*
+            if [ -e "$1" ]; then
+                backup_log "(cleanup) 🗓 Keeping Latest per-week (weeks 5–12)"
+                for KFILE in "$TMPDIR"/w_*; do [ -f "$KFILE" ] || continue; KP="$(cut -d'|' -f2 "$KFILE")"; backup_cleanup_file_log "(cleanup) 🗓 [$(basename "$KFILE")] -> $(basename "$KP")"; done
+            fi
+            set -- "$TMPDIR"/m_*
+            if [ -e "$1" ]; then
+                backup_log "(cleanup) 🗃 Keeping Latest per-month (months 4–24)"
+                for KFILE in "$TMPDIR"/m_*; do [ -f "$KFILE" ] || continue; KP="$(cut -d'|' -f2 "$KFILE")"; backup_cleanup_file_log "(cleanup) 🗃 [$(basename "$KFILE")] -> $(basename "$KP")"; done
+            fi
+
+            # Deletions: keep all files <7d and today's; delete anything not in keep-set
+            find "$CONTAINER_DIR" -type f -name "*.sql" -print |
+            while IFS= read -r FILE; do
+                EPOCH="$(file_epoch "$FILE")" || continue
+                [ -n "$EPOCH" ] || continue
+                AGE=$((NOW_EPOCH - EPOCH))
+                [ "$AGE" -lt "$DAY_SECS" ] && continue   # today always safe
+                [ "$AGE" -lt "$DAYS7_SECS" ] && continue  # keep all <7d
+
+                KEEPED=0
+                DK="d_$(day_key "$EPOCH")"; WK="w_$(week_key_sun "$EPOCH")"; MK="m_$(month_key "$EPOCH")"
+                for KK in "$DK" "$WK" "$MK"; do
+                    KPATH="$(keep_map_get_path "$TMPDIR" "$KK")"
+                    if [ -n "$KPATH" ] && [ "$FILE" = "$KPATH" ]; then KEEPED=1; break; fi
+                done
+                if [ "$KEEPED" -eq 0 ]; then
+                    backup_cleanup_file_log "(cleanup) 🗑️ Deleting -> $(basename "$FILE")"
+                    rm_safe "$FILE"
+                    DELETED=$((DELETED + 1))
+                fi
+            done
+        ;;
         one)
             # Delete everything in scope except the chosen keepers.
             # Pass 1: per-day deletions (<30d)
-            backup_log "(cleanup) 🗑️ Deleting Non-Latest per-day"
+            printed_day=0
             find "$CONTAINER_DIR" -type f -name "*.sql" -print | \
             while IFS= read -r FILE; do
                 EPOCH="$(file_epoch "$FILE")" || continue
@@ -236,13 +408,17 @@ for CONTAINER_DIR in "$BACKUPS_ROOT"/*; do
                 KEY="day_$(day_key "$EPOCH")"
                 KEEP="$(keep_map_get_path "$TMPDIR" "$KEY")"
                 if [ -n "$KEEP" ] && [ "$FILE" != "$KEEP" ]; then
+                    if [ "$printed_day" -eq 0 ]; then
+                        backup_log "(cleanup) 🗑️ Deleting Non-Latest per-day"
+                        printed_day=1
+                    fi
                     backup_cleanup_file_log "(cleanup) 🗑️ Deleting -> $(basename "$FILE")"
                     rm_safe "$FILE"
                     DELETED=$((DELETED + 1))
                 fi
             done
             # Pass 2: per-month deletions (>=30d)
-            backup_log "(cleanup) 🗑️ Deleting Non-Latest per-month"
+            printed_month=0
             find "$CONTAINER_DIR" -type f -name "*.sql" -print | \
             while IFS= read -r FILE; do
                 EPOCH="$(file_epoch "$FILE")" || continue
@@ -252,6 +428,10 @@ for CONTAINER_DIR in "$BACKUPS_ROOT"/*; do
                 KEY="month_$(month_key "$EPOCH")"
                 KEEP="$(keep_map_get_path "$TMPDIR" "$KEY")"
                 if [ -n "$KEEP" ] && [ "$FILE" != "$KEEP" ]; then
+                    if [ "$printed_month" -eq 0 ]; then
+                        backup_log "(cleanup) 🗑️ Deleting Non-Latest per-month"
+                        printed_month=1
+                    fi
                     backup_cleanup_file_log "(cleanup) 🗑️ Deleting -> $(basename "$FILE")"
                     rm_safe "$FILE"
                     DELETED=$((DELETED + 1))
@@ -262,7 +442,7 @@ for CONTAINER_DIR in "$BACKUPS_ROOT"/*; do
             # Stage latest-per-month (>30d) then delete the rest >30d, then move staged back.
             STAGE="$CONTAINER_DIR/monthly-temp"
             mkdir -p "$STAGE"
-            
+
             # Move keepers for months
             for KFILE in "$TMPDIR"/month_*; do
                 [ -f "$KFILE" ] || continue
@@ -277,7 +457,7 @@ for CONTAINER_DIR in "$BACKUPS_ROOT"/*; do
                     STAGED=$((STAGED + 1))
                 fi
             done
-            
+
             # Delete all >30d that are NOT in stage
             find "$CONTAINER_DIR" -type f -name "*.sql" -print | \
             while IFS= read -r FILE; do
@@ -293,7 +473,7 @@ for CONTAINER_DIR in "$BACKUPS_ROOT"/*; do
                     DELETED=$((DELETED + 1))
                 fi
             done
-            
+
             if is_dry_run; then
                 backup_log "(cleanup) DRY-RUN 🧪 would move staged keepers back"
             else
@@ -311,7 +491,7 @@ for CONTAINER_DIR in "$BACKUPS_ROOT"/*; do
             exit 1
         ;;
     esac
-    
+
     backup_cleanup_file_log "(cleanup) 📈 Summary for $CONTAINER_NAME: kept-per-day=$KEPT_DAYS, kept-per-month=$KEPT_MONTHS, deleted=$DELETED, skipped-today=$SKIPPED_TODAY, staged=$STAGED"
     rm -rf "$TMPDIR"
 done

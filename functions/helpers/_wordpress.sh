@@ -9,7 +9,7 @@ wp_container_config_exists() {
         return 1  # false
     fi
 }
-export -f wp_container_config_exists
+
 
 install_wpcli_in_container() {
 	local WORDPRESS_SERVICE_CONTAINER_NAME="${1:-$WORDPRESS_SERVICE_CONTAINER_NAME}" # Use provided container name or default to 'wordpress'
@@ -37,7 +37,7 @@ install_wpcli_in_container() {
 	fi
 }
 
-export -f install_wpcli_in_container
+
 
 start_wordpress() {
 	stack_name=${1:-$STACK_NAME}
@@ -51,4 +51,4 @@ start_wordpress() {
 		docker-compose -f "${WORDPRESS_DOCKER_COMPOSE_YML}" up -d
 	fi
 }
-export -f start_wordpress
+

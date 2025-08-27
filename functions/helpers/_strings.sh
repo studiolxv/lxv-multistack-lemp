@@ -1,9 +1,15 @@
 #!/bin/sh
 sanitize_string() {
-    # Converts all special characters to hyphens (`-`)
-    echo "$1" | sed 's/[^a-zA-Z0-9]/-/g'
+    # Converts all special characters to the specified replacement
+    local REPLACEMENT="${2:-}"
+    echo "$1" | sed "s/[^a-zA-Z0-9]/$REPLACEMENT/g"
 }
-export -f sanitize_string
+
+# Convert a string to uppercase
+uc_word() {
+    input="$1"
+    printf '%s' "$input" | tr '[:lower:]' '[:upper:]'
+}
 
 search_file_replace() {
     local FILE="$1"
@@ -28,4 +34,4 @@ search_file_replace() {
         return 1
     fi
 }
-export -f search_file_replace
+

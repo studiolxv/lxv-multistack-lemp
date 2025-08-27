@@ -3,7 +3,7 @@ check_cert_in_keychain() {
 	cert_name="${1:-$LEMP_SERVER_DOMAIN}"
 	security find-certificate -c "$cert_name" /Library/Keychains/System.keychain >/dev/null 2>&1
 }
-export -f check_cert_in_keychain
+
 
 update_lemp_ssl() {
     LEMP_SERVER_DOMAIN="${1:-$LEMP_SERVER_DOMAIN}"
@@ -24,7 +24,7 @@ update_lemp_ssl() {
     success_msg "${TRAEFIK_DIR}/${TRAEFIK_DYNAMIC_DIR}/${TRAEFIK_CERTS_YML_FILE_NAME} updated successfully for LEMP stack."
 	line_break
 }
-export -f update_lemp_ssl
+
 # Usage Example:
 # update_lemp_ssl "lemp1.test"
 
@@ -52,6 +52,6 @@ remove_lemp_certs_yml() {
 
     echo "✅ SSL entries for ${LEMP_SERVER_DOMAIN} removed successfully."
 }
-export -f remove_lemp_certs_yml
+
 # Usage Example:
 # remove_lemp_certs_yml "lemp1.test"

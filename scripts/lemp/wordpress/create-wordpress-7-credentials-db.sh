@@ -1,6 +1,6 @@
 #!/bin/sh
-. "$PROJECT_PATH/_environment.sh"
-file_msg "$(basename "$0")"
+. "$PROJECT_PATH/_env-setup.sh"
+# debug_file_msg "$(current_basename)"
 
 #####################################################
 # SOURCE LEMP STACK .ENV
@@ -36,7 +36,7 @@ if [ -z "$USER_INPUT_DB_NAME" ]; then
 else
 	WORDPRESS_DB_NAME="$USER_INPUT_DB_NAME"
 fi
-
+line_break
 input_cursor "WORDPRESS_DB_NAME${C_Reset}: '${C_Magenta}$WORDPRESS_DB_NAME${C_Reset}'"
 line_break
 #####################################################
@@ -59,7 +59,7 @@ else
 	WORDPRESS_TABLE_PREFIX="$USER_INPUT_WORDPRESS_TABLE_PREFIX"
 fi
 line_break
-input_cursor "WORDPRESS_DB_NAME${C_Reset}: '${C_Magenta}${WORDPRESS_TABLE_PREFIX}${C_Reset}'"
+input_cursor "WORDPRESS_TABLE_PREFIX${C_Reset}: '${C_Magenta}${WORDPRESS_TABLE_PREFIX}${C_Reset}'"
 line_break
 #####################################################
 # WORDPRESS: DATABASE USER NAME
@@ -96,7 +96,7 @@ if [ "$USER_LENGTH" -gt "$MAX_LENGTH_WORDPRESS_DB_USER" ]; then
 fi
 
 line_break
-input_cursor "WORDPRESS_DB_USER_PASSWORD${C_Reset}: Will be saved to '${C_Magenta}${WORDPRESS_DIR}/secrets/wp_db_user.txt${C_Reset}'"
+input_cursor "WORDPRESS_DB_PASSWORD${C_Reset}: Will be saved to '${C_Magenta}${WORDPRESS_DIR}/secrets/wp_db_user.txt${C_Reset}'"
 line_break
 WORDPRESS_DB_USER="${WORDPRESS_DB_USER}"
 
@@ -113,40 +113,40 @@ read USER_INPUT_DB_PASSWORD
 if [ -z "$USER_INPUT_DB_PASSWORD" ]; then
 
 	# 64 alphanumeric characters)
-	DEFAULT_WORDPRESS_DB_USER_PASSWORD="$(openssl rand -hex 16)"
+	DEFAULT_WORDPRESS_DB_PASSWORD="$(openssl rand -hex 16)"
 
 	input_cursor "No Wordpress Database password provided. ${C_Reset}Generating a secure wp database password (64 alphanumeric characters)"
 
-	WORDPRESS_DB_USER_PASSWORD="${WORDPRESS_DB_NAME}_${DEFAULT_WORDPRESS_DB_USER_PASSWORD}"
+	WORDPRESS_DB_PASSWORD="${WORDPRESS_DB_NAME}_${DEFAULT_WORDPRESS_DB_PASSWORD}"
 else
-	WORDPRESS_DB_USER_PASSWORD="${USER_INPUT_DB_PASSWORD}"
+	WORDPRESS_DB_PASSWORD="${USER_INPUT_DB_PASSWORD}"
 fi
 
 # Define max length
-MAX_LENGTH_WORDPRESS_DB_USER_PASSWORD=32
+MAX_LENGTH_WORDPRESS_DB_PASSWORD=32
 
 # Check length using `wc -c` (subtract 1 for trailing newline)
-PASS_LENGTH=$(printf "%s" "$WORDPRESS_DB_USER_PASSWORD" | wc -c)
+PASS_LENGTH=$(printf "%s" "$WORDPRESS_DB_PASSWORD" | wc -c)
 PASS_LENGTH=$((PASS_LENGTH - 1))
 
 # Trim password if it exceeds max length
-if [ "$PASS_LENGTH" -gt "$MAX_LENGTH_WORDPRESS_DB_USER_PASSWORD" ]; then
-	WORDPRESS_DB_USER_PASSWORD=$(printf "%s" "$WORDPRESS_DB_USER_PASSWORD" | cut -c1-"$MAX_LENGTH_WORDPRESS_DB_USER_PASSWORD")
+if [ "$PASS_LENGTH" -gt "$MAX_LENGTH_WORDPRESS_DB_PASSWORD" ]; then
+	WORDPRESS_DB_PASSWORD=$(printf "%s" "$WORDPRESS_DB_PASSWORD" | cut -c1-"$MAX_LENGTH_WORDPRESS_DB_PASSWORD")
 	input_cursor "Password was too long! Trimmed to 32 characters"
 fi
 
 line_break
-input_cursor "WORDPRESS_DB_USER_PASSWORD${C_Reset}: Will be saved to '${C_Magenta}${WORDPRESS_DIR}/secrets/wp_db_user_password.txt${C_Reset}'"
+input_cursor "WORDPRESS_DB_PASSWORD${C_Reset}: Will be saved to '${C_Magenta}${WORDPRESS_DIR}/secrets/wp_db_user_password.txt${C_Reset}'"
 
-WORDPRESS_DB_USER_PASSWORD="${WORDPRESS_DB_USER_PASSWORD}"
+WORDPRESS_DB_PASSWORD="${WORDPRESS_DB_PASSWORD}"
 
 #####################################################
 # EXPORTS
 
 export WORDPRESS_DB_NAME
-export WORDPRESS_TABLE_PREFIX
 export WORDPRESS_DB_USER
-export WORDPRESS_DB_USER_PASSWORD
+export WORDPRESS_DB_PASSWORD
+export WORDPRESS_TABLE_PREFIX
 
 #####################################################
 # CREATE LEMP STACK - WORDPRESS CONTAINER
