@@ -139,6 +139,36 @@ else
     fi
     line_break
 
+	#####################################################
+	# PHPMYADMIN THEMES
+	export ASSETS_PHPMYADMIN_THEMES_PATH="${ASSETS_PATH}/phpmyadmin/themes"
+	if [ ! -d "${ASSETS_PHPMYADMIN_THEMES_PATH}/blueberry" ] && [ ! -d "${ASSETS_PHPMYADMIN_THEMES_PATH}/boodark-teal" ] && [ ! -d "${ASSETS_PHPMYADMIN_THEMES_PATH}/darkwolf" ]; then
+		heading "PHPMYADMIN THEMES"
+
+		mkdir -p "${ASSETS_PHPMYADMIN_THEMES_PATH}"
+		example_msg "phpmyadmin default theme sucks lets grab some dark themes..."
+		line_break
+		cd "${ASSETS_PHPMYADMIN_THEMES_PATH}"
+		if [ ! -d "${ASSETS_PHPMYADMIN_THEMES_PATH}/blueberry" ]; then
+			body_msg "🫐 Downloading PHPMYADMIN theme: blueberry"
+			curl -fL -O https://files.phpmyadmin.net/themes/blueberry/1.1.0/blueberry-1.1.0.zip
+			unzip -q blueberry-1.1.0.zip && rm blueberry-1.1.0.zip
+		fi
+		if [ ! -d "${ASSETS_PHPMYADMIN_THEMES_PATH}/boodark-teal" ]; then
+			body_msg "👻 Downloading PHPMYADMIN theme: boodark-teal"
+			curl -fL -O https://files.phpmyadmin.net/themes/boodark-teal/1.1.0/boodark-teal-1.1.0.zip
+			unzip -q boodark-teal-1.1.0.zip && rm boodark-teal-1.1.0.zip
+		fi
+		if [ ! -d "${ASSETS_PHPMYADMIN_THEMES_PATH}/darkwolf" ]; then
+			body_msg "🐺 Downloading PHPMYADMIN theme: darkwolf"
+			curl -fL -O https://files.phpmyadmin.net/themes/darkwolf/5.2/darkwolf-5.2.zip
+			unzip -q darkwolf-5.2.zip && rm darkwolf-5.2.zip
+		fi
+		cd "${PROJECT_PATH}"
+	fi
+
+	#####################################################
+	# ENV
     heading ".ENV FILE"
     generating_msg "Creating new project root \"${PROJECT_NAME}/.env file\"..."
     line_break
@@ -162,6 +192,8 @@ PROJECT_ENV_FILE="${PROJECT_ENV_FILE}"
 STACKS_PATH="${STACKS_PATH}"
 SCRIPTS_PATH="${SCRIPTS_PATH}"
 FUNCTIONS_PATH="${FUNCTIONS_PATH}"
+ASSETS_PATH="${ASSETS_PATH}"
+ASSETS_PHPMYADMIN_THEMES_PATH="${ASSETS_PHPMYADMIN_THEMES_PATH}"
 #
 # OS
 OS_TZ="${OS_TZ}"
@@ -214,35 +246,11 @@ EOF
 
     success_msg ".env Environment variables created successfully"
     line_break
+
+
+
+
+
 fi
 
 debug_success_msg "✅ env-setup.sh sourced successfully"
-
-
-#####################################################
-	# PHPMYADMIN THEMES
-	export ASSETS_PHPMYADMIN_THEMES_PATH="${ASSETS_PATH}/phpmyadmin/themes"
-	if [ ! -d "${ASSETS_PHPMYADMIN_THEMES_PATH}/blueberry" ] && [ ! -d "${ASSETS_PHPMYADMIN_THEMES_PATH}/boodark-teal" ] && [ ! -d "${ASSETS_PHPMYADMIN_THEMES_PATH}/darkwolf" ]; then
-		heading "PHPMYADMIN THEMES"
-
-		mkdir -p "${ASSETS_PHPMYADMIN_THEMES_PATH}"
-		example_msg "phpmyadmin default theme sucks lets grab some dark themes..."
-		line_break
-		cd "${ASSETS_PHPMYADMIN_THEMES_PATH}"
-		if [ ! -d "${ASSETS_PHPMYADMIN_THEMES_PATH}/blueberry" ]; then
-			body_msg "🫐 Downloading PHPMYADMIN theme: blueberry"
-			curl -fL -O https://files.phpmyadmin.net/themes/blueberry/1.1.0/blueberry-1.1.0.zip
-			unzip -q blueberry-1.1.0.zip && rm blueberry-1.1.0.zip
-		fi
-		if [ ! -d "${ASSETS_PHPMYADMIN_THEMES_PATH}/boodark-teal" ]; then
-			body_msg "👻 Downloading PHPMYADMIN theme: boodark-teal"
-			curl -fL -O https://files.phpmyadmin.net/themes/boodark-teal/1.1.0/boodark-teal-1.1.0.zip
-			unzip -q boodark-teal-1.1.0.zip && rm boodark-teal-1.1.0.zip
-		fi
-		if [ ! -d "${ASSETS_PHPMYADMIN_THEMES_PATH}/darkwolf" ]; then
-			body_msg "🐺 Downloading PHPMYADMIN theme: darkwolf"
-			curl -fL -O https://files.phpmyadmin.net/themes/darkwolf/5.2/darkwolf-5.2.zip
-			unzip -q darkwolf-5.2.zip && rm darkwolf-5.2.zip
-		fi
-		cd "${PROJECT_PATH}"
-	fi

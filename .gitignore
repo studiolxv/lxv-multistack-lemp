@@ -12,6 +12,7 @@
 
 # Multi-Stack Files
 /stacks/*
+/stacks_archive/*
 
 # PMA Themes Files
 /assets/phpmyadmin
