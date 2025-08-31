@@ -6,7 +6,7 @@
 
 #####################################################
 # START LEMP CONTAINER
-
+sleep 3
 # Load project .env (so docker-compose has all vars)
 . "${LEMP_ENV_FILE}"
 
@@ -25,8 +25,8 @@ line_break
 
 # Ensure we have the root secret file path and contents
 if [ -z "${DB_ROOT_USER_PASSWORD_FILE:-}" ] || [ ! -f "${DB_ROOT_USER_PASSWORD_FILE}" ]; then
-  warning_msg "DB_ROOT_USER_PASSWORD_FILE not set or file missing: ${DB_ROOT_USER_PASSWORD_FILE:-<unset>}"
-  exit 1
+    warning_msg "DB_ROOT_USER_PASSWORD_FILE not set or file missing: ${DB_ROOT_USER_PASSWORD_FILE:-<unset>}"
+    exit 1
 fi
 MYSQL_ROOT_PASSWORD="$(cat "${DB_ROOT_USER_PASSWORD_FILE}" 2>/dev/null)"
 
@@ -48,14 +48,14 @@ chmod 600 /root/.my.cnf
 status_msg "Waiting for database container to become healthy…"
 i=0
 while :; do
-  health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "${DB_HOST_NAME}" 2>/dev/null || true)
-  [ "${health}" = "healthy" ] && break
-  i=$((i+1))
-  if [ ${i} -ge 30 ]; then
-    warning_msg "Database did not reach healthy state in time; will attempt initialization anyway."
-    break
-  fi
-  sleep 2
+    health=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "${DB_HOST_NAME}" 2>/dev/null || true)
+    [ "${health}" = "healthy" ] && break
+    i=$((i+1))
+    if [ ${i} -ge 30 ]; then
+        warning_msg "Database did not reach healthy state in time; will attempt initialization anyway."
+        break
+    fi
+    sleep 2
 done
 
 # ---- Phase A: handle insecure bootstrap (no root password, socket auth) ----
@@ -72,20 +72,20 @@ SQL
 # ---- Phase B: finish over TCP with password ----
 status_msg "Phase B: applying DB, remote root/grants over TCP (127.0.0.1)…"
 if ! docker exec -i "${DB_HOST_NAME}" sh -lc "mysql -uroot -p'${MYSQL_ROOT_PASSWORD}' -h127.0.0.1 -e 'SELECT 1' >/dev/null 2>&1"; then
-  warning_msg "Root authentication over TCP failed; attempting to create network user via socket…"
-  docker exec -i "${DB_HOST_NAME}" sh -lc "\
+    warning_msg "Root authentication over TCP failed; attempting to create network user via socket…"
+    docker exec -i "${DB_HOST_NAME}" sh -lc "\
 mysql -uroot --protocol=SOCKET -S /var/run/mysqld/mysqld.sock <<SQL
 CREATE USER IF NOT EXISTS 'root'@'%' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}';
 GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 SQL
-" >/dev/null 2>&1 || true
-  # retry TCP ping
-  if docker exec -i "${DB_HOST_NAME}" sh -lc "mysql -uroot -p'${MYSQL_ROOT_PASSWORD}' -h127.0.0.1 -e 'SELECT 1' >/dev/null 2>&1"; then
-    success_msg "Root authentication over TCP is now working."
-  else
-    warning_msg "Root TCP authentication still failing. Check MySQL auth plugins and user@host entries."
-  fi
+    " >/dev/null 2>&1 || true
+    # retry TCP ping
+    if docker exec -i "${DB_HOST_NAME}" sh -lc "mysql -uroot -p'${MYSQL_ROOT_PASSWORD}' -h127.0.0.1 -e 'SELECT 1' >/dev/null 2>&1"; then
+        success_msg "Root authentication over TCP is now working."
+    else
+        warning_msg "Root TCP authentication still failing. Check MySQL auth plugins and user@host entries."
+    fi
 fi
 
 docker exec -i "${DB_HOST_NAME}" sh -lc "\
@@ -128,11 +128,11 @@ SQL
 # Load phpMyAdmin’s configuration storage schema:
 # stream the SQL file out of the phpMyAdmin container and pipe it into mysql in the DB container
 if docker exec "${PHPMYADMIN_CONTAINER_NAME}" test -f /var/www/html/sql/create_tables.sql; then
-  docker exec "${PHPMYADMIN_CONTAINER_NAME}" cat /var/www/html/sql/create_tables.sql \
+    docker exec "${PHPMYADMIN_CONTAINER_NAME}" cat /var/www/html/sql/create_tables.sql \
     | docker exec -i "${DB_HOST_NAME}" sh -lc "mysql -uroot -p'${MYSQL_ROOT_PASSWORD}' -h127.0.0.1 '${PMA_DB}'" || \
     warning_msg "Failed to import phpMyAdmin schema into '${PMA_DB}'."
 else
-  warning_msg "phpMyAdmin schema file not found in container '${PHPMYADMIN_CONTAINER_NAME}'. Skipping import."
+    warning_msg "phpMyAdmin schema file not found in container '${PHPMYADMIN_CONTAINER_NAME}'. Skipping import."
 fi
 
 #####################################################

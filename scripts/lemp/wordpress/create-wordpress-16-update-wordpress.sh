@@ -30,9 +30,9 @@ body_msg "🐳 Preparing WordPress in container: ${WP_CSN}"
 
 # Ensure the WP container is running
 if ! docker ps --format '{{.Names}}' | grep -Fxq "$WP_CSN"; then
-  _die "WordPress container '$WP_CSN' is not running."
+    _die "WordPress container '$WP_CSN' is not running."
 else
-  body_msg "WordPress container '$WP_CSN' is running."
+    body_msg "WordPress container '$WP_CSN' is running."
 fi
 
 DB_WAIT_SECS=${DB_WAIT_SECS:-90}
@@ -40,11 +40,11 @@ body_msg "⏳ Waiting for DB @ ${WORDPRESS_DB_HOST} (up to ${DB_WAIT_SECS}s) …
 
 # First, verify the hostname is resolvable from INSIDE the container
 if ! docker exec "$WP_CSN" sh -lc "command -v getent >/dev/null 2>&1 && getent hosts '${WORDPRESS_DB_HOST%%:*}' >/dev/null 2>&1 || ping -c1 -W1 '${WORDPRESS_DB_HOST%%:*}' >/dev/null 2>&1"; then
-  warning_msg "⚠️ Hostname '${WORDPRESS_DB_HOST}' is not resolvable/reachable from container '$WP_CSN'. Are the WP and DB services on the same Docker network?"
-  docker exec "$WP_CSN" sh -lc "command -v getent >/dev/null 2>&1 && getent hosts '${WORDPRESS_DB_HOST%%:*}' || true"
-  _die "Database host (${WORDPRESS_DB_HOST}) not resolvable from container ($WP_CSN)."
+    warning_msg "⚠️ Hostname '${WORDPRESS_DB_HOST}' is not resolvable/reachable from container '$WP_CSN'. Are the WP and DB services on the same Docker network?"
+    docker exec "$WP_CSN" sh -lc "command -v getent >/dev/null 2>&1 && getent hosts '${WORDPRESS_DB_HOST%%:*}' || true"
+    _die "Database host (${WORDPRESS_DB_HOST}) not resolvable from container ($WP_CSN)."
 else
-  body_msg "✅ Database host (${WORDPRESS_DB_HOST}) is resolvable from container ($WP_CSN)."
+    body_msg "✅ Database host (${WORDPRESS_DB_HOST}) is resolvable from container ($WP_CSN)."
 fi
 
 # Parse optional host:port (default port 3306)
@@ -55,10 +55,10 @@ DBPORT="${DBH##*:}"
 
 end=$(( $(date +%s) + DB_WAIT_SECS ))
 while :; do
-  # Probe from INSIDE the WP container so service names resolve; pass host/user/pass/port via env
-  if docker exec \
-       -e H="$DBHOST" -e U="$WORDPRESS_DB_USER" -e PW="$WORDPRESS_DB_PASSWORD" -e PT="$DBPORT" \
-       "$WP_CSN" sh -lc '
+    # Probe from INSIDE the WP container so service names resolve; pass host/user/pass/port via env
+    if docker exec \
+    -e H="$DBHOST" -e U="$WORDPRESS_DB_USER" -e PW="$WORDPRESS_DB_PASSWORD" -e PT="$DBPORT" \
+    "$WP_CSN" sh -lc '
         if command -v nc >/dev/null 2>&1; then
             nc -z -w2 "$H" "$PT" >/dev/null 2>&1
         elif command -v mysqladmin >/dev/null 2>&1; then
@@ -67,11 +67,11 @@ while :; do
             PHPBIN=php; command -v php >/dev/null 2>&1 || PHPBIN=/usr/local/bin/php;
             "$PHPBIN" -r '\''exit(@fsockopen(getenv("H"),(int)getenv("PT"),$e,$t,2)?0:1);'\''
         fi
-     '; then
-    break
-  fi
-  [ $(date +%s) -ge $end ] && _die "Database not reachable from container ${WP_CSN}: ${WORDPRESS_DB_HOST}"
-  sleep 2
+    '; then
+        break
+    fi
+    [ $(date +%s) -ge $end ] && _die "Database not reachable from container ${WP_CSN}: ${WORDPRESS_DB_HOST}"
+    sleep 2
 done
 
 # Small helper to run wp inside the container (non-interactive)
@@ -80,7 +80,7 @@ dock_exec(){ c="${1:-$WP_CSN}"; shift; docker exec "$c" sh -lc "$1"; }
 
 # Ensure wp-cli is present in the container
 if ! dock_exec "$WP_CSN" 'command -v wp >/dev/null 2>&1'; then
-  _die "wp-cli not found inside ${WP_CSN}. Install wp-cli in the image or sidecar."
+    _die "wp-cli not found inside ${WP_CSN}. Install wp-cli in the image or sidecar."
 fi
 
 # Path inside container (official image uses /var/www/html)
@@ -91,7 +91,7 @@ WP_CORE_WAIT_SECS=${WP_CORE_WAIT_SECS:-60}
 body_msg "⏳ Waiting for main WordPress core files at ${WP_C_PATH} (up to ${WP_CORE_WAIT_SECS}s) …"
 end=$(( $(date +%s) + WP_CORE_WAIT_SECS ))
 while :; do
-  if \
+    if \
     dock_exec "$WP_CSN" "test -f ${WP_C_PATH}/wp-admin/widgets.php" && \
     dock_exec "$WP_CSN" "test -f ${WP_C_PATH}/wp-content/index.php" && \
     dock_exec "$WP_CSN" "test -f ${WP_C_PATH}/wp-includes/version.php" && \
@@ -104,57 +104,94 @@ while :; do
     dock_exec "$WP_CSN" "test -f ${WP_C_PATH}/wp-login.php" && \
     dock_exec "$WP_CSN" "test -f ${WP_C_PATH}/wp-config-sample.php" && \
     dock_exec "$WP_CSN" "test -f ${WP_C_PATH}/wp-admin/includes/upgrade.php"; then
-    body_msg "✅ WordPress core files detected at ${WP_C_PATH} (version.php, wp-settings.php, wp-load.php, wp-config-sample.php, upgrade.php)"
-    break
-  fi
-  [ $(date +%s) -ge $end ] && {
-    warning_msg "Core files not visible yet in container. Directory listing and mount info:";
-    docker exec "$WP_CSN" sh -lc "ls -la ${WP_C_PATH} || true; echo; echo '--- /proc/mounts entries for path ---'; grep '${WP_C_PATH}' /proc/mounts || true";
-    _die "WordPress core files not found at ${WP_C_PATH} after waiting ${WP_CORE_WAIT_SECS}s.";
-  }
-  sleep 2
+        body_msg "✅ WordPress core files detected at ${WP_C_PATH} (version.php, wp-settings.php, wp-load.php, wp-config-sample.php, upgrade.php)"
+        break
+    fi
+    [ $(date +%s) -ge $end ] && {
+        warning_msg "Core files not visible yet in container. Directory listing and mount info:";
+        docker exec "$WP_CSN" sh -lc "ls -la ${WP_C_PATH} || true; echo; echo '--- /proc/mounts entries for path ---'; grep '${WP_C_PATH}' /proc/mounts || true";
+        _die "WordPress core files not found at ${WP_C_PATH} after waiting ${WP_CORE_WAIT_SECS}s.";
+    }
+    
 done
 
+sleep 2
 # Generate wp-config.php if missing (skip-check so DB doesn't need to have tables yet)
 if ! dock_exec "$WP_CSN" "test -f ${WP_C_PATH}/wp-config.php"; then
-  body_msg "🧩 Creating wp-config.php"
-  dock_exec_wp_cli "$WP_CSN" "config create --path='${WP_C_PATH}' \
+    body_msg "🧩 Creating wp-config.php"
+    dock_exec_wp_cli "$WP_CSN" "config create --path='${WP_C_PATH}' \
     --dbname='${WORDPRESS_DB_NAME}' \
     --dbuser='${WORDPRESS_DB_USER}' \
     --dbpass='${WORDPRESS_DB_PASSWORD}' \
     --dbhost='${WORDPRESS_DB_HOST}' \
     --dbprefix='${WORDPRESS_TABLE_PREFIX}' \
     --skip-check"
-  # Harden salts
-  dock_exec_wp_cli "$WP_CSN" "config shuffle-salts --path='${WP_C_PATH}'"
-  # Verify wp-config was created successfully
-  if ! dock_exec "$WP_CSN" "test -f ${WP_C_PATH}/wp-config.php"; then
-    _die "wp-config.php was not created at ${WP_C_PATH}."
-  fi
+    # Harden salts
+    dock_exec_wp_cli "$WP_CSN" "config shuffle-salts --path='${WP_C_PATH}'"
+    # Verify wp-config was created successfully
+    if ! dock_exec "$WP_CSN" "test -f ${WP_C_PATH}/wp-config.php"; then
+        _die "wp-config.php was not created at ${WP_C_PATH}."
+    fi
 fi
 
+sleep 2
 # Install core if not installed
 if ! dock_exec_wp_cli "$WP_CSN" "core is-installed --path='${WP_C_PATH}'" >/dev/null 2>&1; then
-  body_msg "📦 Installing WordPress core with your LXV Multistack LEMP user configurations"
-  dock_exec_wp_cli "$WP_CSN" "core install --path='${WP_C_PATH}' \
+    body_msg "📦 Installing WordPress core with your LXV Multistack LEMP user configurations"
+    dock_exec_wp_cli "$WP_CSN" "core install --path='${WP_C_PATH}' \
     --url='${WORDPRESS_URL}' \
     --title='${WORDPRESS_TITLE}' \
     --admin_user='${WORDPRESS_ADMIN_USER}' \
     --admin_password='${WORDPRESS_ADMIN_USER_PASSWORD}' \
     --admin_email='${WORDPRESS_ADMIN_USER_EMAIL}' \
     --skip-email"
-  # Nice defaults
-  dock_exec_wp_cli "$WP_CSN" "rewrite structure '/%postname%/' --hard --path='${WP_C_PATH}'"
-  dock_exec_wp_cli "$WP_CSN" "option update blogdescription '' --path='${WP_C_PATH}'"
-  # Verify install created tables
-  if ! dock_exec_wp_cli "$WP_CSN" "core is-installed --path='${WP_C_PATH}'" >/dev/null 2>&1; then
-    _die "WordPress core install did not complete; database tables not detected."
-  fi
+    # Nice defaults
+    dock_exec_wp_cli "$WP_CSN" "rewrite structure '/%postname%/' --hard --path='${WP_C_PATH}'"
+    dock_exec_wp_cli "$WP_CSN" "option update blogdescription '' --path='${WP_C_PATH}'"
+    # Verify install created tables
+    if ! dock_exec_wp_cli "$WP_CSN" "core is-installed --path='${WP_C_PATH}'" >/dev/null 2>&1; then
+        _die "WordPress core install did not complete; database tables not detected."
+    fi
 else
-  body_msg "✅ WordPress already installed; updating core settings"
-  dock_exec_wp_cli "$WP_CSN" "option update home '${WORDPRESS_URL}' --path='${WP_C_PATH}'"
-  dock_exec_wp_cli "$WP_CSN" "option update siteurl '${WORDPRESS_URL}' --path='${WP_C_PATH}'"
+    body_msg "✅ WordPress already installed; updating core settings"
+    dock_exec_wp_cli "$WP_CSN" "option update home '${WORDPRESS_URL}' --path='${WP_C_PATH}'"
+    dock_exec_wp_cli "$WP_CSN" "option update siteurl '${WORDPRESS_URL}' --path='${WP_C_PATH}'"
 fi
+
+sleep 4
+
+# --- SMTP configuration for local dev (Mailpit) ---
+# If WP_SMTP_HOST is set (even if user/pass are blank), persist SMTP constants into wp-config.php.
+
+
+
+body_msg "✉️  Configuring SMTP in wp-config.php (host: ${WP_SMTP_HOST}:${WP_SMTP_PORT})"
+sleep 4
+
+ANCHOR="/* That's all, stop editing! Happy publishing. */"
+
+dock_exec_wp_cli "$WP_CSN" "config set WPMS_ON true --type=constant --raw --anchor=\"$ANCHOR\" --placement=before --path=\"$WP_C_PATH\""
+dock_exec_wp_cli "$WP_CSN" "config set WPMS_MAILER smtp --type=constant --anchor=\"$ANCHOR\" --placement=before --path=\"$WP_C_PATH\""
+dock_exec_wp_cli "$WP_CSN" "config set WPMS_SMTP_HOST mailpit --type=constant --anchor=\"$ANCHOR\" --placement=before --path=\"$WP_C_PATH\""
+dock_exec_wp_cli "$WP_CSN" "config set WPMS_SMTP_PORT 1025 --type=constant --raw --anchor=\"$ANCHOR\" --placement=before --path=\"$WP_C_PATH\""
+dock_exec_wp_cli "$WP_CSN" "config set WPMS_SMTP_ENCRYPTION none --type=constant --anchor=\"$ANCHOR\" --placement=before --path=\"$WP_C_PATH\""
+dock_exec_wp_cli "$WP_CSN" "config set WPMS_SMTP_AUTH false --type=constant --raw --anchor=\"$ANCHOR\" --placement=before --path=\"$WP_C_PATH\""
+dock_exec_wp_cli "$WP_CSN" "config set WPMS_SMTP_USER '' --type=constant --anchor=\"$ANCHOR\" --placement=before --path=\"$WP_C_PATH\""
+dock_exec_wp_cli "$WP_CSN" "config set WPMS_SMTP_PASS '' --type=constant --anchor=\"$ANCHOR\" --placement=before --path=\"$WP_C_PATH\""
+dock_exec_wp_cli "$WP_CSN" "config set WPMS_MAIL_FROM 'no-reply@latest.test' --type=constant --anchor=\"$ANCHOR\" --placement=before --path=\"$WP_C_PATH\""
+dock_exec_wp_cli "$WP_CSN" "config set WPMS_MAIL_FROM_FORCE true --type=constant --raw --anchor=\"$ANCHOR\" --placement=before --path=\"$WP_C_PATH\""
+dock_exec_wp_cli "$WP_CSN" "config set WPMS_MAIL_FROM_NAME 'Local WP' --type=constant --anchor=\"$ANCHOR\" --placement=before --path=\"$WP_C_PATH\""
+dock_exec_wp_cli "$WP_CSN" "config set WPMS_MAIL_FROM_NAME_FORCE true --type=constant --raw --anchor=\"$ANCHOR\" --placement=before --path=\"$WP_C_PATH\""
+
+#####################################################
+# INSTALL PLUGINS (after SMTP injection)
+sleep 2
+dock_exec_wp_cli "$WP_CSN" "plugin install wp-mail-smtp --activate"
+
+sleep 4
+# Test email should now go through SMTP (Mailpit)
+dock_exec_wp_cli "$WP_CSN" "eval 'var_dump(wp_mail(\"${WORDPRESS_ADMIN_USER_EMAIL}\", \"WP SMTP Test (after SMTP setup)\", \"Hello from WP container via SMTP.\"));'"
+
 
 # Continue with the next step in your flow
 sh ${SCRIPTS_PATH}/lemp/wordpress/create-wordpress-17-complete.sh

@@ -15,7 +15,7 @@ else
     generating_msg "Generating .env with dynamic variables..."
     line_break
     TIMESTAMP=$(env TZ="$OS_TZ" date +"%Y-%m-%d_%I%M%S_%p_%Z")
-
+    
     # Generate .env file for Docker (without export)
 	cat <<EOL >"$LEMP_ENV_FILE"
 # ENVIRONMENT VARIABLES
@@ -64,8 +64,8 @@ DB_DIR="${DB_DIR}"
 DB_PATH="${DB_PATH}"
 DB_DATA_DIR="${DB_DATA_DIR}"
 DB_DATA_PATH="${DB_DATA_PATH}"
-DB_CONTAINER_DATA_PATH="${DB_CONTAINER_DATA_PATH}"
 DB_CONF_FILE="${DB_CONF_FILE}"
+DB_CONF_FILE_PATH="${DB_CONF_FILE_PATH}"
 DB_CONTAINER_CONF_PATH="${DB_CONTAINER_CONF_PATH}"
 DB_CONTAINER_DATA_PATH="${DB_CONTAINER_DATA_PATH}"
 WORDPRESS_DB_HOST="${DB_HOST_NAME}" # Match docker compose "db" service container name
@@ -143,7 +143,7 @@ DEFAULT_WP_IMAGE="${DEFAULT_WP_IMAGE}"
 DEFAULT_BACKUPS_IMAGE="${DEFAULT_BACKUPS_IMAGE}"
 
 EOL
-
+    
     # Generate lemp-env.sh file to export all variables into docker containers and into cron jobs
     EXPORT_ENV_FILE="${BACKUPS_SCRIPTS_PATH}/lemp-env.sh"
 	cat <<EOL >"$EXPORT_ENV_FILE"
@@ -196,8 +196,8 @@ export DB_DIR="${DB_DIR}"
 export DB_PATH="${DB_PATH}"
 export DB_DATA_DIR="${DB_DATA_DIR}"
 export DB_DATA_PATH="${DB_DATA_PATH}"
-export DB_CONTAINER_DATA_PATH="${DB_CONTAINER_DATA_PATH}"
 export DB_CONF_FILE="${DB_CONF_FILE}"
+export DB_CONF_FILE_PATH="${DB_CONF_FILE_PATH}"
 export DB_CONTAINER_CONF_PATH="${DB_CONTAINER_CONF_PATH}"
 export DB_CONTAINER_DATA_PATH="${DB_CONTAINER_DATA_PATH}"
 export WORDPRESS_DB_HOST="${DB_HOST_NAME}" # Match docker compose "db" service container name
@@ -336,7 +336,8 @@ backup_heading() {
     [ -t 2 ] && printf '%s\n' "\$1" >&2
     [ -t 2 ] && printf '%s\n' "" >&2
     # file (plain)
-    printf '%s\n'"\$1" >> "\${LOG_CONTAINER_PATH}/backup.log"
+	mkdir -p "\${LOG_CONTAINER_PATH}/backups"
+    printf '%s\n'"\$1" >> "\${LOG_CONTAINER_PATH}/backups/backup_console.log"
 }
 
 backup_section_end() {
@@ -345,7 +346,8 @@ backup_section_end() {
     [ -t 2 ] && printf '%s\n' "\$1" >&2
     [ -t 2 ] && printf '%s\n' "----------------------------------------------------" >&2
     # file (plain)
-    printf '%s\n'"\$1" >> "\${LOG_CONTAINER_PATH}/backup.log"
+	mkdir -p "\${LOG_CONTAINER_PATH}/backups"
+    printf '%s\n'"\$1" >> "\${LOG_CONTAINER_PATH}/backups/backup_console.log"
 }
 
 backup_log() {
@@ -355,14 +357,28 @@ backup_log() {
     # printf '%s%s\n' "\${terminal_stamp}" "\${1}" >&2
     printf '%s\n' "\${1}" >&2
     # file (plain)
-    printf '%s %s\n' "\${log_stamp}" "\${1}" >> "\${LOG_CONTAINER_PATH}/backup.log"
+	mkdir -p "\${LOG_CONTAINER_PATH}/backups"
+    printf '%s %s\n' "\${log_stamp}" "\${1}" >> "\${LOG_CONTAINER_PATH}/backups/backup_console.log"
 }
 
 backup_cleanup_file_log() {
     # terminal (colored)
     [ -t 2 ] && printf '%s\n' "\$1" >&2
     # file (plain)
-    printf '%s\n' "- \$1" >> "\${LOG_CONTAINER_PATH}/backup.log"
+	mkdir -p "\${LOG_CONTAINER_PATH}/backups"
+    printf '%s\n' "- \$1" >> "\${LOG_CONTAINER_PATH}/backups/backup_console.log"
+}
+
+backup_manifest() {
+    file="\$1"
+    mkdir -p "\${LOG_CONTAINER_PATH}/backups"
+    if [ -f "\$file" ]; then
+        size=\$(stat -c%s "\$file" 2>/dev/null || stat -f%z "\$file")
+        checksum=\$(sha256sum "\$file" 2>/dev/null | awk '{print \$1}')
+        printf '%s | %s bytes | sha256:%s\n' "\$file" "\$size" "\$checksum" >> "\${LOG_CONTAINER_PATH}/backups/backup_manifest.log"
+    else
+        printf '%s | [MISSING]\n' "\$file" >> "\${LOG_CONTAINER_PATH}/backups/backup_manifest.log"
+    fi
 }
 
 export MYSQL_USER=\$(cat /run/secrets/db_root_user 2>/dev/null)
@@ -372,10 +388,10 @@ export MYSQL_PWD="\$MYSQL_ROOT_PASSWORD"
 backup_log "📄 Exported Variables \$(basename "\$0") >>>"
 
 EOL
-
+    
     # Make export-env.sh executable
     chmod +x "$EXPORT_ENV_FILE"
-
+    
     if [ -f "$LEMP_ENV_FILE" ] && [ -f "$EXPORT_ENV_FILE" ]; then
         success_msg "${LEMP_DIR}/.env and ${LEMP_DIR}/scripts/lemp-env.sh files created successfully"
     else

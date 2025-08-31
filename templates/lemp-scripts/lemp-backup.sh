@@ -171,6 +171,7 @@ ${DUMP_OPTIONS} --all-databases >"$CREATE_ALL_BACKUPS_FILE"
 if [ -s "$CREATE_ALL_BACKUPS_FILE" ]; then
     backup_log "(${BACKUP_TYPE}) ✅ Full Backup success for: $DB_HOST_NAME"
     backup_log "(${BACKUP_TYPE}) 📦 -> $CREATE_ALL_BACKUPS_FILE"
+	backup_manifest "$CREATE_ALL_BACKUPS_FILE"
 else
     backup_log "(${BACKUP_TYPE}) ❌ Full Backup failed for: $DB_HOST_NAME"
     backup_log "(${BACKUP_TYPE}) 📦 -> $CREATE_ALL_BACKUPS_FILE"
@@ -210,6 +211,7 @@ for DB in $DATABASES; do
     if [ -s "$DB_BACKUPS_FILE" ]; then
         backup_log "(${BACKUP_TYPE}) ✅ Backup success for: $DB"
         backup_log "(${BACKUP_TYPE}) 📦 -> $DB_BACKUPS_FILE"
+		backup_manifest "$DB_BACKUPS_FILE"
     else
         backup_log "(${BACKUP_TYPE}) ❌ Backup failed for: $DB"
         backup_log "(${BACKUP_TYPE}) 📦 -> $DB_BACKUPS_FILE"

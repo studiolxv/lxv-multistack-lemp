@@ -482,11 +482,21 @@ changed_to_dir_msg() {
     fi
 }
 
+wait_msg() {
+	printf '%s' "${C_Status}${opt_wall}${C_Reset}${indent_three}⏳ ${C_Yellow}${1}${C_Reset}"
+}
 debug_success_msg() {
     if [ -n "$opt_debug" ] && [ "$opt_debug" = "true" ]; then
         msg="$1"
         echo "${C_Status}${opt_wall}${C_Reset}${indent_three}${C_Green}✔︎ < ${C_Reset}${msg} ${C_Green}>${C_Reset}"
     fi
+}
+
+debug_error_msg() {
+	if [ -n "$opt_debug" ] && [ "$opt_debug" = "true" ]; then
+	    msg="$1"
+	    echo "${C_Status}${opt_wall}${C_Reset}${indent_three}🚨 ${C_Red}ERROR: ${msg}"
+	fi
 }
 
 error_msg() {

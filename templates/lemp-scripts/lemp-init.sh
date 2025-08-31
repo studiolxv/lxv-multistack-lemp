@@ -68,15 +68,6 @@ start_cron() {
     chown root:root /etc/cron.d 2>/dev/null || true
     chmod 0755 /etc/cron.d 2>/dev/null || true
 
-    # If directory is empty, install a minimal probe file
-    if ! ls -A /etc/cron.d >/dev/null 2>&1; then
-        backup_log "⚠️ /etc/cron.d is empty; installing a probe so we can see ticks."
-        cat > /etc/cron.d/probe <<'EOF'
-SHELL=/bin/sh
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-* * * * * root date "+%F %T cron.d OK" >> /var/log/cron_probe.log
-EOF
-    fi
 
     # Normalize all cron.d entries: strip CRLF, expand env, enforce perms
     for f in /etc/cron.d/*; do
@@ -126,7 +117,7 @@ EOF
     done
 
     # Ensure probe log exists so appends never fail
-    : > /var/log/cron_probe.log 2>/dev/null || true
+    : > /var/log/backups/backup_cron_test.log 2>/dev/null || true
 
     backup_log "📝 Loaded /etc/cron.d entries:"
     ls -l /etc/cron.d | sed -n '1,200p'

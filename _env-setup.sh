@@ -8,19 +8,13 @@ if [ "$(basename "$0")" = "start.sh" ] || [ "$(basename "$0")" = "manage.sh" ]; 
     debug_msg "🔍 Debug mode is enabled!"
 fi
 
-
-# Avoid infinite loops when sourcing multiple times
-# if [ -n "$FUNCTIONS_PATH" ]; then
-#     return
-# fi
-
 #####################################################
 # ENVIRONMENT VARIABLES
 # Load project path from .env
 if [ -f "${PROJECT_ENV_FILE}" ]; then
 
     # Source the .env file
-        debug_msg "Sourcing .env file"
+    debug_msg "Sourcing .env file"
 
     . "${PROJECT_ENV_FILE}"
 

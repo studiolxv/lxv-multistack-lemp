@@ -7,11 +7,11 @@ heading "WORDPRESS .ENV FILE"
 
 # SOURCE LEMP STACK .ENV
 if [[ -z "${STACK_NAME}" ]]; then
-	warning_msg "${C_Yellow}\$STACK_NAME${C_Reset} is not defined, please select a LEMP stack."
-	# Select a LEMP stack using the new function, defines ${STACK_NAME}
-	select_lemp_stack
+    warning_msg "${C_Yellow}\$STACK_NAME${C_Reset} is not defined, please select a LEMP stack."
+    # Select a LEMP stack using the new function, defines ${STACK_NAME}
+    select_lemp_stack
 else
-	debug_success_msg "${C_Yellow}\$STACK_NAME${C_Reset} is defined as '${C_Yellow}${STACK_NAME}${C_Reset}'. Proceeding..."
+    debug_success_msg "${C_Yellow}\$STACK_NAME${C_Reset} is defined as '${C_Yellow}${STACK_NAME}${C_Reset}'. Proceeding..."
 fi
 
 source_lemp_stack_env ${STACK_NAME}
@@ -20,13 +20,13 @@ source_lemp_stack_env ${STACK_NAME}
 # WORDPRESS: ENV FILE
 # Check if the .env file already exists
 if [ -f "$WORDPRESS_ENV_FILE" ]; then
-	success_msg "$WORDPRESS_LEMP_CONTAINER_PATH/.env file already exists."
+    success_msg "$WORDPRESS_LEMP_CONTAINER_PATH/.env file already exists."
 else
-	status_msg "🔍 ${C_Reset}$WORDPRESS_LEMP_CONTAINER_PATH/.env file ${C_Red}not found."
-	line_break
-	status_msg "   ${C_Yellow}Generating with dynamic variables..."
-	TIMESTAMP=$(env TZ="$OS_TZ" date +"%Y-%m-%d_%I%M%S_%p_%Z")
-
+    status_msg "🔍 ${C_Reset}$WORDPRESS_LEMP_CONTAINER_PATH/.env file ${C_Red}not found."
+    line_break
+    status_msg "   ${C_Yellow}Generating with dynamic variables..."
+    TIMESTAMP=$(env TZ="$OS_TZ" date +"%Y-%m-%d_%I%M%S_%p_%Z")
+    
 	cat <<EOL >"$WORDPRESS_ENV_FILE"
 # ENVIRONMENT VARIABLES
 # Created $TIMESTAMP
@@ -83,19 +83,29 @@ WORDPRESS_ENV_FILE="${WORDPRESS_ENV_FILE}"
 #
 # DOCKER COMPOSE FILE
 WORDPRESS_DOCKER_COMPOSE_YML="${WORDPRESS_DOCKER_COMPOSE_YML}"
+#
+# MAILPIT Mailpit UI is available at https://mailpit.${LEMP_SERVER_DOMAIN}
+WP_SMTP_HOST="mailpit"
+WP_SMTP_PORT="1025"
+WP_SMTP_ENCRYPTION="none"
+WP_SMTP_USER=
+WP_SMTP_PASS=
+WP_SMTP_FROM="no-reply@${LEMP_SERVER_DOMAIN}"
+WP_SMTP_FROM_NAME="Local WP"
+
 EOL
-
-	cat_msg "$WORDPRESS_ENV_FILE" # Display the .env file content
-	line_break
-
-	# Debugging pwd
-	# echo "$WORDPRESS_LEMP_CONTAINER_PATH"
-
-	if [ -f "$WORDPRESS_ENV_FILE" ]; then
-		success_msg "${WORDPRESS_LEMP_CONTAINER_PATH}/.env file created successfully"
-	else
-		error_msg "creating ${WORDPRESS_LEMP_CONTAINER_PATH}/.env file created, create manually or try again"
-	fi
+    
+    cat_msg "$WORDPRESS_ENV_FILE" # Display the .env file content
+    line_break
+    
+    # Debugging pwd
+    # echo "$WORDPRESS_LEMP_CONTAINER_PATH"
+    
+    if [ -f "$WORDPRESS_ENV_FILE" ]; then
+        success_msg "${WORDPRESS_LEMP_CONTAINER_PATH}/.env file created successfully"
+    else
+        error_msg "creating ${WORDPRESS_LEMP_CONTAINER_PATH}/.env file created, create manually or try again"
+    fi
 fi
 
 ###############

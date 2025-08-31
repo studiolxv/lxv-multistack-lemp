@@ -17,7 +17,7 @@ services:
     volumes:
       - "./.env:/etc/environment:ro"
       - "./${DB_DIR}/data:/${DB_CONTAINER_DATA_PATH}"
-      - "./${DB_CONF_FILE}:/${DB_CONTAINER_CONF_PATH}"
+      - "${DB_CONF_FILE_PATH}:/${DB_CONTAINER_CONF_PATH}"
       - "./${DB_DIR}/backups:/${BACKUPS_CONTAINER_NAME}/backups"
       - "./${LOG_DIR}:${LOG_CONTAINER_PATH}"
       - "./${BACKUPS_SCRIPTS_DIR}/mysql-healthcheck.sh:/${BACKUPS_CONTAINER_NAME}/scripts/mysql-healthcheck.sh"
@@ -84,9 +84,6 @@ services:
       - .env
     environment:
       TZ: ${OS_TZ}
-    # extra_hosts:
-    #   - "${LEMP_SERVER_DOMAIN}:127.0.0.1"
-    #   - "phpmyadmin.${LEMP_SERVER_DOMAIN}:127.0.0.1"
     volumes:
       - ./.env:/etc/environment:ro
       - "./nginx/conf.d:/etc/nginx/conf.d" # Loads all .conf files in this dir automatically
@@ -101,6 +98,8 @@ services:
   backups:
     image: debian:bookworm-slim
     container_name: ${BACKUPS_CONTAINER_NAME}
+    init: true                 # Ensure proper PID 1 signal handling (tini)
+    stop_grace_period: 2m      # Allow time for shutdown backup to complete
     tty: true  # Enables color output in logs
     env_file:
       - ./.env
@@ -110,7 +109,7 @@ services:
       - "./${BACKUPS_SCRIPTS_DIR}:/${BACKUPS_CONTAINER_NAME}/scripts"
       - "./${DB_DIR}/backups:/${BACKUPS_CONTAINER_NAME}/backups"
       - "./${LOG_DIR}:${LOG_CONTAINER_PATH}"
-      - "./${BACKUPS_CRON_DIR}:/etc/cron.d"
+      - "${BACKUPS_CRON_DIR}:/etc/cron.d"
     environment:
       TZ: ${OS_TZ}
       COLORTERM: truecolor
@@ -130,6 +129,17 @@ services:
       db:
         condition: service_healthy
 
+    mailpit:
+        image: axllent/mailpit:latest
+        container_name: ${LEMP_SERVER_DOMAIN}-mailpit
+        restart: always
+        networks:
+          - <<REPLACE_LEMP_NETWORK_NAME>>
+          - traefik_network
+        # Optional: keep host ports for quick access; remove if you only want vhost
+        #ports:
+        #   - "1025:1025"  # SMTP
+        #   - "8025:8025"  # Web UI -> http://mailpit${LEMP_SERVER_DOMAIN}:8025
 networks:
   <<REPLACE_LEMP_NETWORK_NAME>>: # shell script during lemp-create.sh will replace this
     name: ${LEMP_NETWORK_NAME}
