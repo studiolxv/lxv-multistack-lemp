@@ -1,6 +1,7 @@
 /**/.env
 /**/*.log
 
+
 # Traefik configuration files
 /traefik/dynamic/*.yml
 
@@ -14,8 +15,8 @@
 /stacks/*
 /stacks_archive/*
 
-# PMA Themes Files
-/assets/phpmyadmin
+# phpMyAdmin Themes (These will be downloaded on install)
+/assets/phpmyadmin/**
 
 # Draft Markdown Files
 *.draft.md
@@ -48,3 +49,4 @@ build/
 
 # Traefik ACME certs storage file (Let's Encrypt data)
 acme.json
+
