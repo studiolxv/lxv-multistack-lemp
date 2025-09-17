@@ -1,0 +1,52 @@
+/**/.env
+/**/*.log
+
+
+# Traefik configuration files
+/traefik/dynamic/*.yml
+
+# Certs and PEMs
+/traefik/certs/*
+**/*.pem
+**/*.crt
+**/*.key
+
+# Multi-Stack Files
+/stacks/*
+/stacks_archive/*
+
+# phpMyAdmin Themes (These will be downloaded on install)
+/assets/phpmyadmin/**
+
+# Draft Markdown Files
+*.draft.md
+
+# Docker Compose local override files
+**/docker-compose.override.yml
+
+# Docker volumes or tmp dirs if stored locally
+volumes/
+tmp/
+**/tmp/
+
+# Database dumps and backups
+**/*.sql
+**/*.sql.gz
+**/backups/**
+
+# OS/system files
+.DS_Store
+Thumbs.db
+
+# Editor/project metadata
+.vscode/
+.idea/
+
+# Node / frontend build cache (if you have any frontend in this repo)
+node_modules/
+dist/
+build/
+
+# Traefik ACME certs storage file (Let's Encrypt data)
+acme.json
+
