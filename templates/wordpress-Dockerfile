@@ -1,0 +1,42 @@
+# Base WP image (PHP 8.4)
+FROM wordpress:php8.4
+
+# Install runtime tools used from Docker Desktop Exec and for admin/DB tasks
+# Keep the layer small and cache-friendly
+RUN set -eux; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends \
+	bash bash-completion \
+	less nano vim-tiny \
+	procps iproute2 \
+	netcat-openbsd mariadb-client \
+	ca-certificates curl; \
+	rm -rf /var/lib/apt/lists/*
+
+# Build & enable SOAP (temporarily install build deps, then purge)
+RUN set -eux; \
+	savedAptMark="$(apt-mark showmanual)"; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends libxml2-dev; \
+	docker-php-ext-install -j"$(nproc)" soap; \
+	# revert to previous manual marks and remove build deps
+	apt-mark auto '.*' > /dev/null; \
+	apt-mark manual ${savedAptMark} > /dev/null; \
+	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
+	rm -rf /var/lib/apt/lists/*
+
+# Install WP-CLI
+# (Optionally pin a version via WP_CLI_VERSION build-arg)
+ARG WP_CLI_VERSION
+RUN set -eux; \
+	url="https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar"; \
+	if [ -n "${WP_CLI_VERSION:-}" ]; then \
+	url="https://github.com/wp-cli/wp-cli/releases/download/v${WP_CLI_VERSION}/wp-cli-${WP_CLI_VERSION}.phar"; \
+	fi; \
+	curl -fsSL "$url" -o /usr/local/bin/wp; \
+	chmod +x /usr/local/bin/wp; \
+	# basic sanity check
+	/usr/local/bin/wp --version --allow-root >/dev/null
+
+# Use bash for a nicer interactive shell in Docker Desktop Exec
+SHELL ["/bin/bash", "-lc"]

@@ -1,0 +1,30 @@
+name: ${WORDPRESS_CONTAINER_NAME}
+services:
+  wordpress:
+    # image: wordpress:latest
+    build:
+      context: ./  # Path to the folder containing the Dockerfile
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env # Wordpress .env file
+      - ../../.env # Lemp Stack .env file
+    container_name: ${WORDPRESS_SERVICE_CONTAINER_NAME}
+    restart: always
+    environment:
+      WORDPRESS_TABLE_PREFIX: "${WORDPRESS_TABLE_PREFIX}"
+      WORDPRESS_DB_HOST: "${DB_HOST_NAME}"
+      WORDPRESS_DB_NAME: "${WORDPRESS_DB_NAME}"
+      WORDPRESS_DB_USER: "${WORDPRESS_DB_USER}"
+      WORDPRESS_DB_PASSWORD: "${WORDPRESS_DB_PASSWORD}"
+    volumes:
+      - ./${WORDPRESS_PUBLIC_DIR}:/var/www/html
+    networks:
+      - <<REPLACE_LEMP_NETWORK_NAME>>
+      - traefik_network
+
+networks:
+  <<REPLACE_LEMP_NETWORK_NAME>>:
+    external: true
+
+  traefik_network:
+    external: true
